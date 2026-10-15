@@ -1,0 +1,21 @@
+{
+  "name": "cardbridge",
+  "version": "0.1.0",
+  "description": "RisuAI card converter for SillyTavern and Marinara Engine",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "license": "GPL-3.0",
+  "type": "module",
+  "devDependencies": {
+    "esbuild": "^0.25.10",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@adobe/css-tools": "^4.4.4",
+    "dompurify": "^3.3.2",
+    "markdown-it": "^14.1.0",
+    "postcss-selector-parser": "^7.1.1",
+    "wasmoon": "^1.16.0"
+  }
+}

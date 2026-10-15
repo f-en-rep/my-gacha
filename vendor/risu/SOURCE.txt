@@ -1,0 +1,3 @@
+454e5e207747399f43a4788f5f08ecd5aa291550 Wed Oct 14 15:38:25 2026 +0900
+RisuAI https://github.com/kwaroran/RisuAI (GPL-3.0). cbs.ts, infunctions.ts, parser excerpts. json.lua by rxi (MIT). rpack map by Kwaroran (MIT).
+Changed: import lines of cbs.ts (5-7), infunctions.ts (1) to point at local stubs.
