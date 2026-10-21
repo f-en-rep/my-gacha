@@ -25,6 +25,9 @@ export interface BannerProgress {
 }
 
 export interface PullRecord {
+  /** IndexedDB 자동 번호 */
+  id?: number;
+  saveId: Id;
   bannerId: Id;
   characterId: Id;
   rarity: Rarity;
@@ -52,6 +55,10 @@ export interface Save {
   freeMode: boolean;
   /** 난수 시드. 뽑을 때마다 갱신 */
   rngState: number;
+  /** 로비에 세울 캐릭터 */
+  featuredCharacterId?: Id;
+  /** 마지막으로 매일 보상을 받은 날 (YYYY-MM-DD, 기기 시간대) */
+  lastDailyClaim?: string;
   createdAt: string;
   updatedAt: string;
 }

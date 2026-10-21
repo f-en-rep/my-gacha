@@ -1,6 +1,7 @@
 // 서비스별 요청 만들기와 응답 읽기.
 import type { TextProfile, TextProviderKind } from '../../types';
 import type { ChatMessage, ChatOptions, ChatResult } from './index';
+import { vertexGenerateUrl } from './vertex';
 
 export const DEFAULT_BASE_URLS: Record<TextProviderKind, string> = {
   openrouter: 'https://openrouter.ai/api/v1',
@@ -9,6 +10,7 @@ export const DEFAULT_BASE_URLS: Record<TextProviderKind, string> = {
   'openai-compatible': '',
   anthropic: 'https://api.anthropic.com/v1',
   gemini: 'https://generativelanguage.googleapis.com/v1beta',
+  vertex: 'https://aiplatform.googleapis.com/v1',
 };
 
 export const ANTHROPIC_VERSION = '2023-06-01';
@@ -20,7 +22,8 @@ export type ProviderFamily = 'openai' | 'anthropic' | 'gemini';
 
 export function familyOf(provider: TextProviderKind): ProviderFamily {
   if (provider === 'anthropic') return 'anthropic';
-  if (provider === 'gemini') return 'gemini';
+  // Vertex AI도 본문은 Gemini generateContent 형식
+  if (provider === 'gemini' || provider === 'vertex') return 'gemini';
   return 'openai';
 }
 
@@ -71,7 +74,8 @@ export function authHeaders(profile: TextProfile): Record<string, string> {
         'anthropic-dangerous-direct-browser-access': 'true',
       };
     case 'gemini':
-      return { 'x-goog-api-key': profile.apiKey };
+      // Vertex 인증 헤더는 비동기(토큰 발급)라 vertex.ts의 vertexAuthHeaders가 붙인다
+      return profile.provider === 'vertex' ? {} : { 'x-goog-api-key': profile.apiKey };
     default: {
       const h: Record<string, string> = {};
       if (profile.apiKey) h.Authorization = `Bearer ${profile.apiKey}`;
@@ -135,6 +139,7 @@ export function buildChatRequest(
       const body: Record<string, unknown> = { contents };
       if (system) body.systemInstruction = { parts: [{ text: system }] };
       if (Object.keys(generationConfig).length) body.generationConfig = generationConfig;
+      if (profile.provider === 'vertex') return { url: vertexGenerateUrl(profile), headers, body };
       const model = encodeURIComponent(profile.model.replace(/^models\//, ''));
       return { url: `${base}/models/${model}:generateContent`, headers, body };
     }

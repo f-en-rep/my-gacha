@@ -30,6 +30,51 @@ describe('parseAllowedTarget', () => {
   });
 });
 
+describe('Vertex AI hosts', () => {
+  it('allows the global, regional and oauth2 hosts', () => {
+    expect(parseAllowedTarget('https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-2.5-flash:generateContent')).not.toBeNull();
+    expect(parseAllowedTarget('https://us-central1-aiplatform.googleapis.com/v1/projects/p/locations/us-central1/publishers/google/models/m:generateContent')).not.toBeNull();
+    expect(parseAllowedTarget('https://asia-northeast3-aiplatform.googleapis.com/v1/x')).not.toBeNull();
+    expect(parseAllowedTarget('https://oauth2.googleapis.com/token')).not.toBeNull();
+  });
+
+  it('rejects anything else that merely looks similar', () => {
+    for (const u of [
+      'http://us-central1-aiplatform.googleapis.com/v1',
+      'https://aiplatform.googleapis.com.evil.com/',
+      'https://us-central1-aiplatform.googleapis.com.evil.com/',
+      'https://evil.com/-aiplatform.googleapis.com',
+      'https://us_central1-aiplatform.googleapis.com/',
+      'https://us.central1-aiplatform.googleapis.com/',
+      'https://-aiplatform.googleapis.com/',
+      'https://aiplatform.us.rep.googleapis.com/',
+      'https://storage.googleapis.com/',
+      'https://www.googleapis.com/oauth2/v4/token',
+      'https://accounts.google.com/o/oauth2/token',
+      'https://us-central1-aiplatform.googleapis.com:8443/',
+    ]) {
+      expect(parseAllowedTarget(u), u).toBeNull();
+    }
+  });
+
+  it('forwards the bearer token to a regional Vertex host', async () => {
+    const upstream = vi.fn(async () => new Response('{}', { headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', upstream);
+    const target = 'https://europe-west4-aiplatform.googleapis.com/v1/projects/p/locations/europe-west4/publishers/google/models/m:generateContent';
+    const res = await call(
+      new Request(`${SELF}/api/relay`, {
+        method: 'POST',
+        headers: { 'X-Relay-Target': target, Authorization: 'Bearer ya29.x', 'Content-Type': 'application/json', Origin: SELF },
+        body: '{}',
+      }),
+    );
+    expect(res.status).toBe(200);
+    const [url, init] = upstream.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe(target);
+    expect(new Headers(init.headers).get('authorization')).toBe('Bearer ya29.x');
+  });
+});
+
 describe('filterRequestHeaders', () => {
   it('drops hop-by-hop, host, origin, referer, cookie, cf-*, x-relay-target', () => {
     const h = new Headers({

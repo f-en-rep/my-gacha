@@ -1,7 +1,7 @@
 import type { Id } from './world';
 
 /** 텍스트 생성 서비스 */
-export type TextProviderKind = 'openrouter' | 'openai' | 'anthropic' | 'gemini' | 'nanogpt' | 'openai-compatible';
+export type TextProviderKind = 'openrouter' | 'openai' | 'anthropic' | 'gemini' | 'vertex' | 'nanogpt' | 'openai-compatible';
 
 /** 그림 생성 서비스 */
 export type ImageProviderKind = 'novelai' | 'pixai';
@@ -18,12 +18,23 @@ interface ProfileBase {
   useRelay: boolean;
 }
 
+export interface VertexOptions {
+  /** apiKey: Vertex AI API 키 (express mode) / serviceAccount: 서비스 계정 JSON 키 파일. 둘 다 apiKey 칸에 저장 */
+  auth: 'apiKey' | 'serviceAccount';
+  /** 서비스 계정 방식에서 필수. 비우면 JSON의 project_id */
+  projectId?: string;
+  /** 예: global, us-central1. 비우면 global */
+  location?: string;
+}
+
 export interface TextProfile extends ProfileBase {
   type: 'text';
   provider: TextProviderKind;
   model: string;
   maxTokens?: number;
   temperature?: number;
+  /** provider가 'vertex'일 때만 */
+  vertex?: VertexOptions;
 }
 
 export interface ImageProfile extends ProfileBase {
@@ -57,4 +68,7 @@ export interface AppSettings {
   autoPaintLowRarity: boolean;
   /** 마지막 백업 내보내기 시각 */
   lastBackupAt?: string;
+  /** 지금 플레이 중인 월드와 세이브 */
+  activeWorldId?: Id;
+  activeSaveId?: Id;
 }

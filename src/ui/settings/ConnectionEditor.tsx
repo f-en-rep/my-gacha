@@ -19,6 +19,7 @@ import {
   type TestOutcome,
 } from '../connections';
 import { Field, NumberInput, SecretInput, Toggle } from './fields';
+import { VertexFields } from './VertexFields';
 
 type Load = { status: 'loading' } | { status: 'missing' } | { status: 'ready'; profile: ConnectionProfile; isNew: boolean };
 
@@ -162,6 +163,7 @@ function TextFields({ p, set }: { p: TextProfile; set: (patch: Partial<TextProfi
   const listId = useMemo(() => 'models-' + p.id, [p.id]);
   const provider = TEXT_PROVIDERS.find((x) => x.value === p.provider);
   const needsBase = p.provider === 'openai-compatible';
+  const isVertex = p.provider === 'vertex';
 
   async function fetchModels() {
     setLoadingModels(true);
@@ -181,7 +183,14 @@ function TextFields({ p, set }: { p: TextProfile; set: (patch: Partial<TextProfi
     <>
       <Field label="서비스">
         {(id) => (
-          <select id={id} value={p.provider} onChange={(e) => set({ provider: e.target.value as TextProfile['provider'] })}>
+          <select
+            id={id}
+            value={p.provider}
+            onChange={(e) => {
+              const provider = e.target.value as TextProfile['provider'];
+              set({ provider, vertex: provider === 'vertex' ? (p.vertex ?? { auth: 'apiKey' }) : undefined });
+            }}
+          >
             {TEXT_PROVIDERS.map((x) => (
               <option key={x.value} value={x.value}>
                 {x.label}
@@ -191,14 +200,20 @@ function TextFields({ p, set }: { p: TextProfile; set: (patch: Partial<TextProfi
         )}
       </Field>
       <Field label="이름">{(id) => <input id={id} value={p.label} onChange={(e) => set({ label: e.target.value })} placeholder={`예: ${provider?.label ?? ''} 메인`} />}</Field>
-      <Field label="API 키">
-        {(id) => <SecretInput id={id} value={p.apiKey} onChange={(v) => set({ apiKey: v })} placeholder={needsBase ? '필요 없으면 비워 두세요' : 'sk-…'} />}
-      </Field>
-      <Field label={needsBase ? 'Base URL' : 'Base URL (선택)'} hint={needsBase ? '예: https://example.com/v1' : '비우면 기본 주소'}>
-        {(id) => (
-          <input id={id} type="url" inputMode="url" value={p.baseUrl ?? ''} onChange={(e) => set({ baseUrl: e.target.value })} placeholder={needsBase ? 'https://…/v1' : '기본 주소'} autoCapitalize="off" spellCheck={false} />
-        )}
-      </Field>
+      {isVertex ? (
+        <VertexFields p={p} set={set} />
+      ) : (
+        <>
+          <Field label="API 키">
+            {(id) => <SecretInput id={id} value={p.apiKey} onChange={(v) => set({ apiKey: v })} placeholder={needsBase ? '필요 없으면 비워 두세요' : 'sk-…'} />}
+          </Field>
+          <Field label={needsBase ? 'Base URL' : 'Base URL (선택)'} hint={needsBase ? '예: https://example.com/v1' : '비우면 기본 주소'}>
+            {(id) => (
+              <input id={id} type="url" inputMode="url" value={p.baseUrl ?? ''} onChange={(e) => set({ baseUrl: e.target.value })} placeholder={needsBase ? 'https://…/v1' : '기본 주소'} autoCapitalize="off" spellCheck={false} />
+            )}
+          </Field>
+        </>
+      )}
       <Field label="모델" hint={modelMsg || provider?.modelHint} wide>
         {(id) => (
           <div className="input-group">

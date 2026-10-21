@@ -14,9 +14,27 @@ import {
   parseModelList,
   type RequestTweaks,
 } from './providers';
+import {
+  VERTEX_CURATED_MODELS,
+  VertexAuthError,
+  describeVertexHttpError,
+  forgetVertexToken,
+  isServiceAccountMode,
+  parseVertexModelList,
+  vertexAuthHeaders,
+  vertexModelsUrl,
+} from './vertex';
 
 export { extractJson } from './json';
 export { DEFAULT_BASE_URLS, TextResponseError, TextTruncatedError, buildChatRequest } from './providers';
+export {
+  VERTEX_CURATED_MODELS,
+  VERTEX_DEFAULT_LOCATION,
+  VERTEX_LOCATIONS,
+  VertexAuthError,
+  summarizeServiceAccount,
+  type ServiceAccountSummary,
+} from './vertex';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -71,14 +89,24 @@ export class JsonGenerationError extends Error {
 export async function chatComplete(profile: TextProfile, messages: ChatMessage[], opts: ChatOptions = {}): Promise<ChatResult> {
   const label = `텍스트 생성 (${profile.provider}/${profile.model})`;
   const tweaks: RequestTweaks = {};
+  const isVertex = profile.provider === 'vertex';
+  let vertexAuth = isVertex ? await vertexAuthHeaders(profile, opts.signal) : {};
+  let reauthed = false;
   // 400 응답이 특정 파라미터 때문이면 고쳐서 한두 번 더 보낸다
   for (let adjust = 0; ; adjust++) {
     const req = buildChatRequest(profile, messages, opts, tweaks);
     const res = await apiFetch(
       req.url,
-      { method: 'POST', headers: req.headers, body: JSON.stringify(req.body), signal: opts.signal },
+      { method: 'POST', headers: { ...req.headers, ...vertexAuth }, body: JSON.stringify(req.body), signal: opts.signal },
       { useRelay: profile.useRelay },
     );
+    // 캐시된 토큰이 취소되었을 수 있으니 한 번만 새로 받아 다시 보낸다
+    if (res.status === 401 && !reauthed && isServiceAccountMode(profile)) {
+      reauthed = true;
+      await forgetVertexToken(profile);
+      vertexAuth = await vertexAuthHeaders(profile, opts.signal);
+      continue;
+    }
     if (!res.ok && res.status === 400 && adjust < 2 && familyOf(profile.provider) === 'openai') {
       const detail = await res.clone().text().catch(() => '');
       const fix = paramFix(detail, req.body, tweaks);
@@ -170,11 +198,15 @@ function truncate(s: string, n: number): string {
 }
 
 /** 에러를 사용자에게 보여 줄 한국어 설명으로 바꾼다 */
-export function describeTextError(err: unknown, profile?: Pick<TextProfile, 'useRelay' | 'model'>): string {
+export function describeTextError(err: unknown, profile?: Pick<TextProfile, 'useRelay' | 'model'> & Partial<Pick<TextProfile, 'provider' | 'vertex'>>): string {
   if (err instanceof DOMException && err.name === 'AbortError') return '요청이 취소되었습니다.';
   if (err instanceof Error && err.name === 'AbortError') return '요청이 취소되었습니다.';
-  if (err instanceof TextTruncatedError || err instanceof TextResponseError || err instanceof JsonGenerationError) {
+  if (err instanceof TextTruncatedError || err instanceof TextResponseError || err instanceof JsonGenerationError || err instanceof VertexAuthError) {
     return err.message;
+  }
+  if (err instanceof ApiError && profile?.provider === 'vertex') {
+    const v = describeVertexHttpError(err, profile.vertex?.auth === 'serviceAccount');
+    if (v) return v;
   }
   if (err instanceof ApiError) {
     const s = err.status;
@@ -201,6 +233,15 @@ export function describeTextError(err: unknown, profile?: Pick<TextProfile, 'use
 export async function testTextConnection(profile: TextProfile): Promise<ConnectionTestResult> {
   const started = Date.now();
   const elapsed = () => Date.now() - started;
+  // 서비스 계정은 토큰 발급과 생성 요청을 따로 확인해서 어디서 막혔는지 알려 준다
+  const twoStage = isServiceAccountMode(profile);
+  if (twoStage) {
+    try {
+      await vertexAuthHeaders(profile);
+    } catch (err) {
+      return { ok: false, message: `서비스 계정 인증(토큰 발급) 실패: ${describeTextError(err, profile)}`, ms: elapsed() };
+    }
+  }
   try {
     const res = await chatComplete(profile, [{ role: 'user', content: 'Reply with the single word: ok' }], { maxTokens: 16 });
     return { ok: true, message: `연결 성공 (모델: ${res.model})`, ms: elapsed() };
@@ -213,12 +254,14 @@ export async function testTextConnection(profile: TextProfile): Promise<Connecti
         ms: elapsed(),
       };
     }
-    return { ok: false, message: describeTextError(err, profile), ms: elapsed() };
+    const msg = describeTextError(err, profile);
+    return { ok: false, message: twoStage ? `인증(토큰 발급)은 성공했지만 생성 요청이 실패했습니다: ${msg}` : msg, ms: elapsed() };
   }
 }
 
 /** 서비스가 모델 목록을 주면 돌려준다. 못 주면 빈 배열 */
 export async function listModels(profile: TextProfile): Promise<string[]> {
+  if (profile.provider === 'vertex') return listVertexModels(profile);
   try {
     const res = await apiFetch(modelsUrl(profile), { method: 'GET', headers: authHeaders(profile) }, { useRelay: profile.useRelay });
     await ensureOk(res, '모델 목록');
@@ -226,4 +269,20 @@ export async function listModels(profile: TextProfile): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+/** Vertex: 서비스 계정이면 publisher 모델 목록을 시도하고, 안 되면 정리해 둔 목록 (API 키는 목록 API를 못 쓴다) */
+async function listVertexModels(profile: TextProfile): Promise<string[]> {
+  if (isServiceAccountMode(profile)) {
+    try {
+      const headers = await vertexAuthHeaders(profile);
+      const res = await apiFetch(vertexModelsUrl(profile), { method: 'GET', headers }, { useRelay: profile.useRelay });
+      await ensureOk(res, '모델 목록');
+      const ids = parseVertexModelList(await res.json());
+      if (ids.length) return ids;
+    } catch {
+      // 아래 목록으로
+    }
+  }
+  return [...VERTEX_CURATED_MODELS];
 }

@@ -5,6 +5,17 @@ export const SCHEMA_VERSION = 1;
 
 export type Id = string;
 
+export type WorldStatus = 'draft' | 'generating' | 'ready';
+
+export interface GenProgress {
+  /** 지금 하는 단계 이름 (화면에 그대로 보여 준다) */
+  stage: string;
+  done: number;
+  total: number;
+  /** 마지막 실패 메시지. 있으면 "이어서 생성" 버튼을 보여 준다 */
+  error?: string;
+}
+
 /** 3~6★ */
 export type Rarity = 3 | 4 | 5 | 6;
 
@@ -49,6 +60,14 @@ export interface World {
   art: ArtStyle;
   /** 원작자 표시 (선택) */
   author?: string;
+  /** draft: 입력만 됨 / generating: 생성 중 / ready: 플레이 가능 */
+  status: WorldStatus;
+  /** 생성 진행 상황. 중간에 멈춰도 이어서 할 수 있게 남긴다 */
+  genProgress?: GenProgress;
+  /** 가챠 수치를 바꾸고 싶을 때만 (없으면 명일방주 기본값) */
+  gachaOverrides?: Record<string, unknown>;
+  /** 친구에게 받은 월드 팩에서 왔는지 */
+  importedFrom?: { packName: string; importedAt: string };
   createdAt: string;
   updatedAt: string;
 }

@@ -1,0 +1,507 @@
+/* ── 월드 패널 ──────────────────────────────────── */
+
+/* 위쪽 버튼 */
+.wl-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.wl-actions .wl-new {
+  grid-column: 1 / -1;
+}
+
+@container page (min-width: 520px) {
+  .wl-actions {
+    grid-template-columns: 1.2fr 1fr 1fr;
+  }
+
+  .wl-actions .wl-new {
+    grid-column: auto;
+  }
+}
+
+.wl-msg {
+  font-size: 13.5px;
+}
+
+.wl-msg-ok {
+  padding: 10px 12px;
+  border-left: 3px solid var(--ok);
+  background: var(--ok-soft);
+  overflow-wrap: anywhere;
+}
+
+.wl-msg-fail {
+  padding: 10px 12px;
+  border-left: 3px solid var(--fail);
+  background: var(--fail-soft);
+  color: var(--fail);
+}
+
+.wl-empty {
+  padding: 18px 0;
+  color: var(--ink-3);
+  font-size: 14px;
+}
+
+/* 목록 */
+.wl-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.wl-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.wl-item[aria-current='true'] {
+  margin: 0 -10px;
+  padding: 12px 10px;
+  background: var(--surface);
+  box-shadow: inset 3px 0 0 var(--ink);
+}
+
+.wl-main {
+  flex: 1 1 200px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.wl-main:hover strong {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.wl-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.wl-title strong {
+  font-size: 15.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.wl-title .tag-optional {
+  margin-left: 0;
+  vertical-align: 0;
+}
+
+.wl-mark {
+  padding: 1px 6px;
+  background: var(--accent);
+  border: 1px solid var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.wl-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 12px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+
+.wl-row-actions {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+/* 삭제 확인 */
+.wl-dialog {
+  width: min(440px, calc(100vw - 32px));
+  padding: 22px 20px 18px;
+  border: 1px solid var(--ink);
+  border-radius: var(--r);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.wl-dialog::backdrop {
+  background: rgba(23, 23, 26, 0.4);
+}
+
+.wl-dialog h2 {
+  margin-bottom: 8px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.wl-dialog p {
+  font-size: 14px;
+}
+
+.wl-loss {
+  margin: 12px 0;
+  padding: 10px 12px 10px 28px;
+  border-left: 3px solid var(--fail);
+  background: var(--fail-soft);
+  font-size: 13.5px;
+}
+
+.wl-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.btn.btn-danger-solid {
+  background: var(--fail);
+  border-color: var(--fail);
+  color: #fff;
+}
+
+.btn.btn-danger-solid:hover:not(:disabled) {
+  background: #a62c23;
+}
+
+/* 오른쪽 페이지 머리 */
+.wz-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wz-head .kicker {
+  margin: 0;
+}
+
+.wz-head h2 {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.03em;
+}
+
+/* 마법사 */
+.wz textarea {
+  min-height: 0;
+  padding: 10px 12px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.wz textarea:hover {
+  border-color: var(--ink-3);
+}
+
+.wz textarea:focus {
+  outline: none;
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.wz textarea::placeholder {
+  color: var(--ink-3);
+}
+
+.wz [aria-invalid='true'] {
+  border-color: var(--fail);
+}
+
+.wz-count {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wz-count .mono {
+  flex: none;
+  font-size: 11.5px;
+}
+
+.wz .form-actions {
+  flex-wrap: wrap;
+}
+
+/* 진행 */
+.wp-desc {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+
+.wp-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--ink);
+  background: var(--surface);
+}
+
+.wp-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wp-stage {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.meter.wp-meter {
+  height: 8px;
+  margin: 2px 0 4px;
+}
+
+.wp-meter span {
+  transition: width 0.3s;
+}
+
+.wp-meter.running span {
+  background: repeating-linear-gradient(135deg, var(--ink) 0 6px, #3a3a40 6px 12px);
+  background-size: 17px 100%;
+  animation: wp-stripes 0.8s linear infinite;
+}
+
+@keyframes wp-stripes {
+  to {
+    background-position: 17px 0;
+  }
+}
+
+.form-errors p {
+  margin-top: 2px;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+.wp .form-errors {
+  padding-left: 12px;
+}
+
+.wp-input summary {
+  cursor: pointer;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  font-weight: 650;
+}
+
+.wp-input dl {
+  margin: 10px 0 0;
+  font-size: 13.5px;
+}
+
+.wp-input dt {
+  margin-top: 10px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.wp-input dd {
+  margin: 2px 0 0;
+  white-space: pre-wrap;
+}
+
+/* 정보 */
+.wi-ready {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--ink);
+  background: var(--accent-soft);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.wi-ready > span {
+  display: flex;
+  flex-direction: column;
+}
+
+.wi-ready strong {
+  font-size: 16px;
+}
+
+.wi-ready small {
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+
+.wi-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.wi-play {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wi-cast {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin-top: 12px;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+}
+
+.wi-cast-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border-left: 1px solid var(--rule);
+}
+
+.wi-cast-cell:first-child {
+  border-left: 0;
+}
+
+.wi-stars {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.wi-cast-cell.r6 .wi-stars {
+  color: var(--ink);
+}
+
+.wi-cast-cell.r6 {
+  box-shadow: inset 0 3px 0 var(--accent);
+}
+
+.wi-cast-cell b {
+  font-size: 22px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.wi-currency {
+  margin-top: 8px;
+}
+
+.wi-currency b {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.wi-text {
+  margin-top: 10px;
+  font-size: 14px;
+  white-space: pre-wrap;
+}
+
+.wi-text.clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.wi-more {
+  margin-top: 4px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.wi-toggle {
+  padding-top: 12px;
+}
+
+.wi-export {
+  display: flex;
+  flex-direction: column;
+}
+
+.wi-export-item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.wi-export-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wi-export-text strong {
+  font-size: 14.5px;
+}
+
+.wi-export-text small {
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+
+.wi-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--ink-3);
+}
+
+.wi-check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.wi-check small {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border: 1px solid var(--rule);
+  font-size: 11px;
+}
+
+@container page (min-width: 520px) {
+  .wi-export-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
+  .wi-export-item .wi-check {
+    grid-column: 1;
+  }
+
+  .wi-export-item .btn {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+}

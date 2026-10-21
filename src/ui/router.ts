@@ -6,7 +6,7 @@ export type SettingsSub = { kind: 'connection'; id: string } | { kind: 'routing'
 export type Route =
   | { name: 'home' }
   | { name: 'pull' }
-  | { name: 'characters' }
+  | { name: 'characters'; id?: string }
   | { name: 'world' }
   | { name: 'settings'; sub?: SettingsSub };
 
@@ -19,7 +19,7 @@ export function parseHash(hash: string): Route {
     case 'pull':
       return { name: 'pull' };
     case 'characters':
-      return { name: 'characters' };
+      return b ? { name: 'characters', id: b } : { name: 'characters' };
     case 'world':
       return { name: 'world' };
     case 'diagnostics':
@@ -57,6 +57,7 @@ export const paths = {
   home: '/home',
   pull: '/pull',
   characters: '/characters',
+  character: (id: string) => `/characters/${encodeURIComponent(id)}`,
   world: '/world',
   settings: '/settings',
   routing: '/settings/routing',
