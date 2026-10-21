@@ -75,6 +75,12 @@ export function CharacterDetail({ character: c, save, no }: { character: Charact
         {!owned && <span className="cd-locked">미보유</span>}
       </div>
 
+      <div className="cd-edit">
+        <a className="btn btn-small btn-ghost" href={'#' + paths.editCharacter(c.id)}>
+          편집
+        </a>
+      </div>
+
       {owned && canPaint && (
         <div className="cd-paint">
           {c.portraitId ? (
@@ -98,6 +104,12 @@ export function CharacterDetail({ character: c, save, no }: { character: Charact
         <h2 id="cd-name">{c.name}</h2>
         <Stars rarity={c.rarity} />
       </header>
+      {c.origin?.kind === 'card' && (
+        <p className="cd-origin">
+          카드에서 가져옴 · {c.origin.fileName}
+          {c.origin.creator && ` · 만든 이 ${c.origin.creator}`}
+        </p>
+      )}
 
       {tags.length > 0 && (
         <ul className="cd-tags" aria-label="태그">
