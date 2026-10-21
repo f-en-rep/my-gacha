@@ -229,9 +229,10 @@ export async function generateWorld(worldId: Id, opts: GenerateOptions = {}): Pr
     });
     onProgress?.(stage, done, total);
   } catch (err) {
-    const message = describeTextError(err, profile);
+    // 사용자가 취소한 것은 실패가 아니라 멈춤: 오류 문구를 남기지 않는다
+    const error = signal?.aborted ? undefined : describeTextError(err, profile);
     await db.worlds
-      .update(worldId, { status: 'generating', genProgress: { stage, done, total, error: message }, updatedAt: now() })
+      .update(worldId, { status: 'generating', genProgress: { stage, done, total, error }, updatedAt: now() })
       .catch(() => undefined);
     throw err;
   }

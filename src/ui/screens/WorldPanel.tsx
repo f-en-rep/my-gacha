@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Icon } from '../Icon';
 import { useSetupSteps } from '../setup';
 import { Panel, PageHint } from '../panel/Panel';
@@ -16,6 +17,13 @@ export function WorldPanel() {
   const worlds = useWorlds();
   const game = useActiveGame();
   const selectedId = sub.kind === 'world' ? sub.id : undefined;
+  const subKey = sub.kind === 'world' ? sub.id : sub.kind;
+
+  // 다른 월드나 마법사로 바꾸면 오른쪽 페이지를 맨 위부터
+  useEffect(() => {
+    document.querySelector('.panel .page-right')?.scrollTo(0, 0);
+    if (subKey !== 'none') document.querySelector('.panel .book')?.scrollTo(0, 0);
+  }, [subKey]);
 
   return (
     <Panel

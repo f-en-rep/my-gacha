@@ -72,7 +72,7 @@ export function languageLabel(code: string): string {
 export function WorldStatusPill({ world, run }: { world: World; run: RunState }) {
   if (world.status === 'ready') return <span className="pill pill-ok">준비됨</span>;
   if (run.running) return <span className="pill pill-run">생성 중</span>;
-  if (run.error || world.genProgress?.error) return <span className="pill pill-fail">실패</span>;
+  if (!run.cancelled && (run.error || world.genProgress?.error)) return <span className="pill pill-fail">실패</span>;
   if (world.status === 'generating') return <span className="pill pill-pending">멈춤</span>;
   return <span className="pill">입력만</span>;
 }

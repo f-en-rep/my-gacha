@@ -8,14 +8,15 @@ export function WorldProgress({ world }: { world: World }) {
   const text = useTextReady();
   // 이 탭에서 돌고 있으면 바로 받은 값, 아니면 DB에 남은 기록
   const p = (run.running && run.progress) || world.genProgress;
-  const error = run.running ? undefined : (run.error ?? world.genProgress?.error);
+  // 이 탭에서 사용자가 멈췄으면 생성기가 남긴 '취소' 오류는 보여 주지 않는다
+  const error = run.running || run.cancelled ? undefined : (run.error ?? world.genProgress?.error);
   const pct = p && p.total > 0 ? Math.min(100, Math.round((p.done / p.total) * 100)) : 0;
   const stopped = !run.running && world.status === 'generating' && !error && !run.cancelled;
 
   return (
     <div className="wp stack">
       <header className="wz-head">
-        <span className="kicker">{run.running ? 'GENERATING' : 'DRAFT'}</span>
+        <span className="kicker">{run.running ? 'GENERATING' : world.status === 'generating' ? 'PAUSED' : 'DRAFT'}</span>
         <h2>{world.name.trim() ? worldName(world) : run.running ? '이름 짓는 중…' : worldName(world)}</h2>
         {world.description && <p className="wp-desc muted small">{world.description}</p>}
       </header>

@@ -165,13 +165,13 @@
   margin-top: 16px;
 }
 
-.btn-danger-solid {
+.btn.btn-danger-solid {
   background: var(--fail);
   border-color: var(--fail);
   color: #fff;
 }
 
-.btn-danger-solid:hover:not(:disabled) {
+.btn.btn-danger-solid:hover:not(:disabled) {
   background: #a62c23;
 }
 
@@ -263,7 +263,7 @@
   font-weight: 700;
 }
 
-.wp-meter {
+.meter.wp-meter {
   height: 8px;
   margin: 2px 0 4px;
 }

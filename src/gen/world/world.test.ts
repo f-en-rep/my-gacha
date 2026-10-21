@@ -216,7 +216,7 @@ describe('generateWorld', () => {
     await expect(run).rejects.toMatchObject({ name: 'AbortError' });
     const w = (await db.worlds.get(id))!;
     expect(w.status).toBe('generating');
-    expect(w.genProgress?.error).toBe('요청이 취소되었습니다.');
+    expect(w.genProgress?.error).toBeUndefined();
     expect(await db.characters.where('rarity').equals(6).count()).toBe(2);
     expect(await db.characters.where('rarity').equals(5).count()).toBe(0);
   });
