@@ -23,6 +23,19 @@ export interface CombatStats {
   block: number;
 }
 
+/** 바깥 캐릭터 카드(SillyTavern / RisuAI)에서 가져온 캐릭터 */
+export interface CardOrigin {
+  kind: 'card';
+  fileName: string;
+  creator?: string;
+  /** chara_card_v1 / v2 / v3 */
+  spec: string;
+  /** 카드의 상황 설정. 1:1 대화 프롬프트에 참고로 들어간다 */
+  scenario?: string;
+  /** 카드의 첫 인사. 1:1 대화의 말투 참고 */
+  greeting?: string;
+}
+
 export interface Character {
   id: Id;
   worldId: Id;
@@ -44,6 +57,8 @@ export interface Character {
   stats?: CombatStats;
   /** "full" = 6★·5★ 자세한 시트, "light" = 3★·4★ 묶음 생성 짧은 시트 */
   detail: 'full' | 'light';
+  /** 카드에서 가져왔으면 */
+  origin?: CardOrigin;
   createdAt: string;
   updatedAt: string;
 }

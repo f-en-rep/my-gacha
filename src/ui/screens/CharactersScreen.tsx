@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { EmptyState } from '../common';
 import { PageHint, Panel } from '../panel/Panel';
 import { paths } from '../router';
 import { useActiveGame, useCast } from '../../game/store';
 import { CharacterList, type RarityFilter, type TagFilter } from '../characters/CharacterList';
 import { CharacterDetail } from '../characters/CharacterDetail';
+import { CharacterEditor } from '../characters/CharacterEditor';
+import { CardImport } from '../characters/CardImport';
 
-export function CharactersPanel({ id }: { id?: string }) {
+export function CharactersPanel({ id, mode }: { id?: string; mode?: 'new' | 'edit' | 'import' }) {
   const { loading, world, save } = useActiveGame();
   const ready = world?.status === 'ready' ? world : undefined;
   const cast = useCast(ready?.id);
@@ -33,11 +35,16 @@ export function CharactersPanel({ id }: { id?: string }) {
   const index = id ? cast.findIndex((c) => c.id === id) : -1;
   const selected = index >= 0 ? cast[index] : undefined;
 
+  let right: ReactNode;
+  if (mode === 'import') right = <CardImport key="import" world={ready} save={save} />;
+  else if (mode === 'new') right = <CharacterEditor key="new" world={ready} cast={cast} mode="new" />;
+  else if (mode === 'edit' && id) right = <CharacterEditor key={id} world={ready} cast={cast} mode={{ edit: id }} />;
+
   return (
     <Panel
       {...common}
-      focus={id ? 'right' : 'left'}
-      back={paths.characters}
+      focus={id || mode ? 'right' : 'left'}
+      back={mode === 'edit' && id ? paths.character(id) : paths.characters}
       left={
         <CharacterList
           world={ready}
@@ -51,7 +58,7 @@ export function CharactersPanel({ id }: { id?: string }) {
         />
       }
       right={
-        selected ? (
+        right ?? (selected ? (
           <CharacterDetail character={selected} save={save} no={index + 1} />
         ) : id ? (
           <EmptyState title="캐릭터를 찾을 수 없습니다">
@@ -61,7 +68,7 @@ export function CharactersPanel({ id }: { id?: string }) {
           </EmptyState>
         ) : (
           <PageHint>왼쪽에서 캐릭터를 고르면 프로필이 여기 펼쳐집니다.</PageHint>
-        )
+        ))
       }
     />
   );
