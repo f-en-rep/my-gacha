@@ -65,6 +65,7 @@ export const characterSchema = z.object({
   tags: z.object({ position: text(200), role: strList, element: text(200), trait: strList }),
   appearance: text(),
   imageTags: text(4000),
+  imageNegative: text(4000).optional(),
   personality: text(),
   background: text(),
   quotes: z.array(text(2000)).max(100),

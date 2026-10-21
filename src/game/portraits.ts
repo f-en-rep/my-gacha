@@ -1,14 +1,17 @@
 // 초상화 그리기. 그림 연결이 없으면 아무것도 하지 않는다.
 //
 // - 그림 연결 = settings.routing.image 가 가리키는 이미지 프로필
-// - 프롬프트 = 월드 화풍 태그 + 캐릭터 그림용 태그 + 초상화 구도 태그 (항상 영어, PLAN 4-3)
+// - 공통 프롬프트 = 연결의 메인 프롬프트 + 월드 화풍 태그 + 초상화 구도 태그 (항상 영어, PLAN 4-3)
+// - 캐릭터 프롬프트 = 캐릭터 그림용 태그 (+ 캐릭터 네거티브). NovelAI V4 이상은 캐릭터 슬롯으로,
+//   슬롯이 없는 모델은 공통 프롬프트 뒤에 이어 붙는다 (gen/image가 처리)
 // - 연결별 큐(한 번에 하나, 최소 간격)는 paintQueued가 지킨다
 // - 같은 캐릭터를 동시에 두 번 그리지 않는다 (inFlight)
 import { db, getSettings } from '../db';
 import { newId, now } from '../core/id';
 import { paintQueued, toImageError, toWebp } from '../gen/image';
 import { useLiveQuery } from '../ui/hooks';
-import type { Asset, Character, Id, ImageProfile, World } from '../types';
+import type { CharacterPrompt } from '../gen/image/types';
+import type { Asset, Character, Id, ImageGenSettings, ImageProfile, World } from '../types';
 
 export interface PaintOptions {
   priority?: 'foreground' | 'background';
@@ -42,11 +45,27 @@ export function joinTags(...parts: (string | undefined)[]): string {
   return out.join(', ');
 }
 
-/** 화풍 태그 + 캐릭터 태그 + 구도 태그 순서로 조립 */
-export function buildPortraitPrompt(world: Pick<World, 'art'> | undefined, character: Pick<Character, 'imageTags'>): { prompt: string; negativePrompt: string } {
+export interface PortraitPrompt {
+  /** 공통 프롬프트: 메인 프롬프트 + 화풍 + 구도 */
+  prompt: string;
+  negativePrompt: string;
+  /** 캐릭터 슬롯 */
+  characters: CharacterPrompt[];
+}
+
+/**
+ * 초상화 프롬프트 조립.
+ * 네거티브: 연결에 적은 네거티브가 있으면 그것, 없으면 앱 기본 네거티브. 여기에 월드 네거티브를 더한다.
+ */
+export function buildPortraitPrompt(
+  world: Pick<World, 'art'> | undefined,
+  character: Pick<Character, 'imageTags' | 'imageNegative'>,
+  gen?: ImageGenSettings,
+): PortraitPrompt {
   return {
-    prompt: joinTags(world?.art.positiveTags, character.imageTags, PORTRAIT_FRAMING_TAGS),
-    negativePrompt: joinTags(world?.art.negativeTags, DEFAULT_NEGATIVE_TAGS),
+    prompt: joinTags(gen?.positive, world?.art.positiveTags, PORTRAIT_FRAMING_TAGS),
+    negativePrompt: joinTags(gen?.negative?.trim() ? gen.negative : DEFAULT_NEGATIVE_TAGS, world?.art.negativeTags),
+    characters: [{ prompt: joinTags(character.imageTags), negative: joinTags(character.imageNegative) || undefined }],
   };
 }
 
@@ -101,13 +120,13 @@ async function doPaint(characterId: Id, opts: PaintOptions): Promise<Id | undefi
     if (have) return have;
   }
   const world = await db.worlds.get(character.worldId);
-  const { prompt, negativePrompt } = buildPortraitPrompt(world, character);
+  const { prompt, negativePrompt, characters } = buildPortraitPrompt(world, character, profile.gen);
   const width = profile.width > 0 ? profile.width : FALLBACK_SIZE.width;
   const height = profile.height > 0 ? profile.height : FALLBACK_SIZE.height;
 
   let result;
   try {
-    result = await paintQueued(profile, { prompt, negativePrompt, width, height, signal }, priority);
+    result = await paintQueued(profile, { prompt, negativePrompt, characters, width, height, signal }, priority);
   } catch (e) {
     throw toImageError(profile.provider, e, profile.useRelay);
   }

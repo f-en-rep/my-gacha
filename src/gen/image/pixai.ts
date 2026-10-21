@@ -25,7 +25,7 @@
 import { ApiError, apiFetch, ensureOk } from '../../net/http';
 import type { ImageProfile } from '../../types';
 import type { ConnectionTestResult } from '../text';
-import { isAbortError, resolveSeed, sleep, toImageError } from './common';
+import { isAbortError, mergeCharacterPrompts, resolveSeed, sleep, toImageError } from './common';
 import type { ImageRequest, ImageResult } from './types';
 
 export const PIXAI_API_BASE = 'https://api.pixai.art';
@@ -118,6 +118,8 @@ export function buildPixAIParameters(
     priority: 1000,
   };
   if (profile.model) params.modelId = profile.model;
+  if (profile.gen?.steps) params.samplingSteps = profile.gen.steps;
+  if (profile.gen?.scale) params.cfgScale = profile.gen.scale;
   if (req.negativePrompt) params.negativePrompts = req.negativePrompt;
   return { ...params, ...(profile.extra ?? {}) };
 }
@@ -138,13 +140,15 @@ export async function generatePixAI(
   const { pollIntervalMs = 2000, timeoutMs = 5 * 60_000 } = poll;
   const width = req.width ?? profile.width;
   const height = req.height ?? profile.height;
-  const seed = resolveSeed(req.seed);
-  const negativePrompt = req.negativePrompt ?? '';
+  const seed = resolveSeed(req.seed ?? profile.gen?.seed);
+  // PixAI에는 캐릭터 슬롯이 없다: 공통 프롬프트에 이어 붙인다
+  const merged = mergeCharacterPrompts(req.prompt, req.negativePrompt ?? '', req.characters);
+  const negativePrompt = merged.negativePrompt;
   const signal = req.signal;
   let taskId: string | undefined;
 
   try {
-    const parameters = buildPixAIParameters(profile, { prompt: req.prompt, negativePrompt, width, height, seed });
+    const parameters = buildPixAIParameters(profile, { prompt: merged.prompt, negativePrompt, width, height, seed });
     const created = await gql<{ createGenerationTask?: PixAITask | null }>(profile, CREATE_TASK, { parameters }, signal);
     let task = created.createGenerationTask;
     if (!task?.id) throw new Error('작업을 만들지 못했습니다.');
@@ -177,7 +181,7 @@ export async function generatePixAI(
       width: media?.width ?? width,
       height: media?.height ?? height,
       seed,
-      prompt: req.prompt,
+      prompt: merged.prompt,
       negativePrompt,
     };
   } catch (e) {

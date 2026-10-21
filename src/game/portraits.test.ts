@@ -83,11 +83,20 @@ beforeEach(async () => {
 });
 
 describe('prompt', () => {
-  it('화풍 + 캐릭터 + 구도 순서, 중복 제거', () => {
-    const { prompt, negativePrompt } = buildPortraitPrompt(world, character);
-    expect(prompt).toBe(`masterpiece, best quality, 1girl, red hair, Solo, ${PORTRAIT_FRAMING_TAGS.replace('solo, ', '')}`);
-    expect(negativePrompt.startsWith('nsfw, lowres')).toBe(true);
+  it('공통 = 화풍 + 구도, 캐릭터 태그는 캐릭터 슬롯으로', () => {
+    const { prompt, negativePrompt, characters } = buildPortraitPrompt(world, character);
+    expect(prompt).toBe(`masterpiece, best quality, ${PORTRAIT_FRAMING_TAGS}`);
+    expect(characters).toEqual([{ prompt: '1girl, red hair, Solo', negative: undefined }]);
+    expect(negativePrompt.startsWith('lowres')).toBe(true);
+    expect(negativePrompt.endsWith('nsfw')).toBe(true);
     expect(joinTags(' a ,, b', 'A, c')).toBe('a, b, c');
+  });
+
+  it('연결의 메인·네거티브 프롬프트와 캐릭터 네거티브를 쓴다', () => {
+    const r = buildPortraitPrompt(world, { ...character, imageNegative: 'glasses' }, { positive: 'very aesthetic', negative: 'bad hands' });
+    expect(r.prompt.startsWith('very aesthetic, masterpiece')).toBe(true);
+    expect(r.negativePrompt).toBe('bad hands, nsfw');
+    expect(r.characters[0]).toEqual({ prompt: '1girl, red hair, Solo', negative: 'glasses' });
   });
 });
 

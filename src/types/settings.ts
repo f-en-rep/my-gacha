@@ -37,6 +37,26 @@ export interface TextProfile extends ProfileBase {
   vertex?: VertexOptions;
 }
 
+/** 그림 생성 설정. 비운 값은 서비스 기본값 */
+export interface ImageGenSettings {
+  /** 메인 프롬프트: 모든 그림 앞에 붙는 태그 (품질·화풍) */
+  positive?: string;
+  /** 네거티브 프롬프트. 비우면 앱 기본 네거티브 */
+  negative?: string;
+  /** 이하 NovelAI 전용 */
+  steps?: number;
+  /** 프롬프트 가이던스 (scale) */
+  scale?: number;
+  sampler?: string;
+  noiseSchedule?: string;
+  /** 프롬프트 가이던스 리스케일 (cfg_rescale) */
+  cfgRescale?: number;
+  /** Variety+ */
+  varietyBoost?: boolean;
+  /** 고정 시드. 비우면 매번 랜덤 */
+  seed?: number;
+}
+
 export interface ImageProfile extends ProfileBase {
   type: 'image';
   provider: ImageProviderKind;
@@ -46,7 +66,8 @@ export interface ImageProfile extends ProfileBase {
   minIntervalMs: number;
   width: number;
   height: number;
-  /** 서비스별 추가 옵션 (steps, sampler 등) */
+  gen?: ImageGenSettings;
+  /** 서비스별 추가 옵션 (요청 parameters에 그대로 덮어씀) */
   extra?: Record<string, unknown>;
 }
 

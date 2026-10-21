@@ -104,6 +104,39 @@ describe('buildNovelAIBody', () => {
   });
 });
 
+describe('buildNovelAIBody: 캐릭터 슬롯과 생성 설정', () => {
+  const base = { prompt: 'masterpiece, solo', negativePrompt: 'lowres', width: 832, height: 1216, seed: 7 };
+
+  it('V4.5: 캐릭터 프롬프트는 char_captions / characterPrompts로 따로 간다', () => {
+    const body = buildNovelAIBody({ ...base, model: 'nai-diffusion-4-5-full', characters: [{ prompt: '1girl, red hair', negative: 'glasses' }] });
+    const p = body.parameters as Record<string, any>;
+    expect(body.input).toBe('masterpiece, solo');
+    expect(p.v4_prompt.caption.base_caption).toBe('masterpiece, solo');
+    expect(p.v4_prompt.caption.char_captions).toEqual([{ char_caption: '1girl, red hair', centers: [{ x: 0.5, y: 0.5 }] }]);
+    expect(p.v4_negative_prompt.caption.char_captions).toEqual([{ char_caption: 'glasses', centers: [{ x: 0.5, y: 0.5 }] }]);
+    expect(p.characterPrompts).toEqual([{ prompt: '1girl, red hair', uc: 'glasses', center: { x: 0.5, y: 0.5 }, enabled: true }]);
+  });
+
+  it('V3: 캐릭터 프롬프트를 공통 프롬프트 뒤에 붙인다', () => {
+    const body = buildNovelAIBody({ ...base, model: 'nai-diffusion-3', characters: [{ prompt: '1girl, red hair', negative: 'glasses' }] });
+    const p = body.parameters as Record<string, any>;
+    expect(body.input).toBe('masterpiece, solo, 1girl, red hair');
+    expect(p.negative_prompt).toBe('lowres, glasses');
+    expect(p.v4_prompt).toBeUndefined();
+  });
+
+  it('생성 설정(steps, scale, sampler, noise, cfg rescale, variety)을 쓴다', () => {
+    const body = buildNovelAIBody({
+      ...base,
+      model: 'nai-diffusion-4-5-full',
+      gen: { steps: 40, scale: 6.5, sampler: 'k_dpmpp_2m', noiseSchedule: 'exponential', cfgRescale: 0.2, varietyBoost: true },
+    });
+    const p = body.parameters as Record<string, any>;
+    expect(p).toMatchObject({ steps: 40, scale: 6.5, sampler: 'k_dpmpp_2m', noise_schedule: 'exponential', cfg_rescale: 0.2 });
+    expect(p.skip_cfg_above_sigma).toBeCloseTo(58);
+  });
+});
+
 describe('extractNovelAIImage', () => {
   it('unzips the PNG from the response zip', () => {
     const png = fakePng(10, 20);

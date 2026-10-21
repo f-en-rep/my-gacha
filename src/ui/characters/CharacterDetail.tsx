@@ -4,14 +4,13 @@ import { isPainting, paintPortrait, usePaintAvailable } from '../../game/portrai
 import { putSave } from '../../game/store';
 import type { Character, CombatStats, Save } from '../../types';
 import { Portrait, Stars } from './Portrait';
+import { PromptSlot } from './PromptSlot';
 
 const STAT_LABELS: { key: keyof CombatStats; label: string }[] = [
   { key: 'hp', label: '체력' },
   { key: 'atk', label: '공격' },
   { key: 'def', label: '방어' },
   { key: 'spd', label: '속도' },
-  { key: 'range', label: '사거리' },
-  { key: 'block', label: '저지' },
 ];
 
 function formatDate(iso: string): string {
@@ -182,6 +181,7 @@ export function CharacterDetail({ character: c, save, no }: { character: Charact
           </table>
         </section>
       )}
+      <PromptSlot character={c} />
     </article>
   );
 }

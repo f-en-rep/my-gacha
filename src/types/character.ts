@@ -31,8 +31,10 @@ export interface Character {
   tags: CharacterTags;
   /** 외형 설명 (월드 언어의 글) */
   appearance: string;
-  /** 외형에서 한 번 뽑아 고정한 그림용 영어 태그 */
+  /** 외형에서 한 번 뽑아 고정한 그림용 영어 태그. NovelAI V4 이상에서는 캐릭터 프롬프트 슬롯에 들어간다 */
   imageTags: string;
+  /** 이 캐릭터만의 네거티브 태그 (캐릭터 슬롯의 네거티브) */
+  imageNegative?: string;
   personality: string;
   background: string;
   /** 대표 대사 몇 줄 */

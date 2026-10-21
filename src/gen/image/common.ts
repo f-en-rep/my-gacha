@@ -107,3 +107,16 @@ export function toImageError(provider: ImageProviderKind, e: unknown, useRelay: 
   }
   return new Error(`${name}: 알 수 없는 오류 (${String(e)})`);
 }
+
+/** 캐릭터 슬롯이 없는 모델용: 캐릭터 프롬프트를 공통 프롬프트 뒤에 이어 붙인다 */
+export function mergeCharacterPrompts(
+  prompt: string,
+  negativePrompt: string,
+  characters: { prompt: string; negative?: string }[] = [],
+): { prompt: string; negativePrompt: string } {
+  const join = (...xs: (string | undefined)[]) => xs.map((x) => (x ?? '').trim()).filter(Boolean).join(', ');
+  return {
+    prompt: join(prompt, ...characters.map((c) => c.prompt)),
+    negativePrompt: join(negativePrompt, ...characters.map((c) => c.negative)),
+  };
+}
