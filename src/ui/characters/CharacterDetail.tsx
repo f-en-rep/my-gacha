@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { isPainting, paintPortrait, usePaintAvailable } from '../../game/portraits';
 import { putSave } from '../../game/store';
+import { paths } from '../router';
 import type { Character, CombatStats, Save } from '../../types';
 import { Portrait, Stars } from './Portrait';
 import { PromptSlot } from './PromptSlot';
@@ -118,7 +119,7 @@ export function CharacterDetail({ character: c, save, no }: { character: Charact
       </dl>
 
       {owned && (
-        <div className="cd-actions">
+        <div className="cd-actions ch-cd-actions">
           {featured ? (
             <p className="cd-featured">
               <span className="brand-mark" aria-hidden="true" />
@@ -129,6 +130,9 @@ export function CharacterDetail({ character: c, save, no }: { character: Charact
               로비에 세우기
             </button>
           )}
+          <a className="btn btn-ghost" href={'#' + paths.chat(c.id)}>
+            대화하기
+          </a>
         </div>
       )}
 

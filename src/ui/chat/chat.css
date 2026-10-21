@@ -376,11 +376,17 @@
   display: flex;
   align-items: flex-end;
   gap: 6px;
-  max-width: min(84%, 560px);
+  padding-right: 6%;
 }
 
 .ch-user .ch-bubble-row {
   flex-direction: row-reverse;
+  padding-right: 0;
+  padding-left: 14%;
+}
+
+.ch-bubble-row .ch-bubble {
+  max-width: 560px;
 }
 
 .ch-bubble {
@@ -421,6 +427,7 @@
 
 /* 답 쓰는 중 */
 .ch-typing {
+  align-self: flex-start;
   display: inline-flex;
   align-items: center;
   gap: 5px;

@@ -30,7 +30,7 @@ export function ChatRoom({ character: c, save, world, hasText }: { character: Ch
   return (
     <div className="ch-room" ref={roomRef}>
       <RoomHead character={c} save={save} world={world} />
-      <Thread character={c} lines={lines} replying={run.replying}>
+      <Thread character={c} lines={lines} replying={run.replying} footKey={`${unanswered ? 'u' : ''}${run.error ?? ''}`}>
         {unanswered && hasText && (
           <div className="ch-error" role="alert">
             <p>{run.error ?? '아직 답을 받지 못한 말이 있어요.'}</p>
@@ -105,6 +105,13 @@ function RoomHead({ character: c, save, world }: { character: Character; save: S
   const [claiming, setClaiming] = useState(false);
   const [notice, setNotice] = useState<{ ok: boolean; text: string }>();
   const [nameOpen, setNameOpen] = useState(false);
+
+  // 보상 알림은 잠시 보여 주고 접는다
+  useEffect(() => {
+    if (!notice?.ok) return;
+    const t = window.setTimeout(() => setNotice(undefined), 6000);
+    return () => window.clearTimeout(t);
+  }, [notice]);
 
   const claim = async () => {
     setClaiming(true);
@@ -263,11 +270,14 @@ function Thread({
   character: c,
   lines,
   replying,
+  footKey,
   children,
 }: {
   character: Character;
   lines: ChatLine[] | undefined;
   replying: boolean;
+  /** 아래쪽 안내(오류, 다시 쓰기)가 바뀌었는지 알리는 값 */
+  footKey: string;
   children?: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -277,7 +287,19 @@ function Thread({
   const lastCharId = useRef<number | undefined | null>(null);
 
   const last = lines?.[lines.length - 1];
-  const sig = `${lines?.length ?? -1}:${last?.id ?? ''}:${replying ? 1 : 0}:${children ? 1 : 0}`;
+  const sig = `${lines?.length ?? -1}:${last?.id ?? ''}:${replying ? 1 : 0}:${footKey}`;
+
+  // 머리말이 자라거나 입력창·키보드로 높이가 바뀌어도, 맨 아래를 보고 있었으면 맨 아래에 붙여 둔다
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => {
+      if (atBottom.current) el.scrollTop = el.scrollHeight;
+    });
+    ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
+    return () => ro.disconnect();
+  }, []);
 
   useLayoutEffect(() => {
     const el = ref.current;

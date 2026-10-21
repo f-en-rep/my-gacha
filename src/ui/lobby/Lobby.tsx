@@ -77,6 +77,7 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
 
   let dialogName: string;
   let dialogBody: ReactNode;
+  let dialogTalk: ReactNode = null;
   if (next) {
     dialogName = '안내';
     dialogBody = (
@@ -112,6 +113,11 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
         {typed.typing && <span className="type-caret" aria-hidden="true" />}
       </p>
     );
+    dialogTalk = (
+      <a className="ch-lobby-talk" href={'#' + paths.chat(featured.id)} onClick={(e) => e.stopPropagation()}>
+        대화하기
+      </a>
+    );
   }
 
   return (
@@ -132,10 +138,10 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
             <i aria-hidden="true" />
             {ready?.currency.pull || '뽑기 재화'} <b>{wallet ? fmt(wallet.pull) : '—'}</b>
           </span>
-          <span className="currency">
+          <a className="currency ch-shop-chip" href={'#' + paths.shop} aria-label={`${ready?.currency.shop || '상점 재화'} ${wallet ? fmt(wallet.shop) : '—'}, 상점 열기`}>
             <i aria-hidden="true" />
             {ready?.currency.shop || '상점 재화'} <b>{wallet ? fmt(wallet.shop) : '—'}</b>
-          </span>
+          </a>
           {canClaim && (
             <button type="button" className="hud-daily" disabled={claiming} onClick={() => void claim()}>
               오늘의 보상 받기 <b>+{fmt(DAILY_PULL_CURRENCY)}</b>
@@ -168,6 +174,7 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
       >
         <span className="dialog-name">{dialogName}</span>
         {dialogBody}
+        {dialogTalk}
         {speaking && (quotes.length > 1 || typed.typing) ? (
           <button
             type="button"
