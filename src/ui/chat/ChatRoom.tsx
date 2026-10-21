@@ -145,13 +145,13 @@ function RoomHead({ character: c, save, world }: { character: Character; save: S
         </div>
         <button
           type="button"
-          className="icon-btn ch-name-btn"
+          className="btn btn-small btn-ghost ch-name-btn"
           aria-label="내 이름 설정"
           aria-expanded={nameOpen}
           aria-pressed={nameOpen}
           onClick={() => setNameOpen((v) => !v)}
         >
-          <span aria-hidden="true">名</span>
+          내 이름
         </button>
       </div>
       <div className="ch-gauge-row">

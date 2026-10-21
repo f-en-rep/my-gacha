@@ -190,7 +190,8 @@
 }
 
 .ch-name-btn {
-  font-size: 15px;
+  font-size: 13px;
+  white-space: nowrap;
   font-weight: 700;
 }
 
@@ -282,9 +283,6 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 12px 16px 16px;
-  background-image: linear-gradient(var(--rule-soft) 1px, transparent 1px);
-  background-size: 100% 28px;
-  background-attachment: local;
 }
 
 .ch-intro {
@@ -645,4 +643,10 @@ a.currency.ch-shop-chip {
 
 a.currency.ch-shop-chip:hover {
   border-color: var(--ink);
+}
+
+@container page (max-width: 420px) {
+  .ch-cd-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
