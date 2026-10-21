@@ -1,23 +1,12 @@
 // 전투 능력치는 모델에게 묻지 않고 코드로 계산한다 (희귀도 × 전투 유형 × 위치, 캐릭터 id로 시드 고정).
-import { createRng } from "../../core/rng";
-import type { CombatStats, Rarity } from "../../types";
+import { createRng } from '../../core/rng';
+import type { CombatStats, Rarity } from '../../types';
 
-export const ARCHETYPES = [
-  "striker",
-  "tank",
-  "healer",
-  "support",
-  "controller",
-  "summoner",
-  "specialist",
-] as const;
+export const ARCHETYPES = ['striker', 'tank', 'healer', 'support', 'controller', 'summoner', 'specialist'] as const;
 export type Archetype = (typeof ARCHETYPES)[number];
 
 /** 희귀도별 기본값 */
-export const RARITY_BASE: Record<
-  Rarity,
-  { hp: number; atk: number; def: number; spd: number }
-> = {
+export const RARITY_BASE: Record<Rarity, { hp: number; atk: number; def: number; spd: number }> = {
   3: { hp: 900, atk: 220, def: 90, spd: 90 },
   4: { hp: 1200, atk: 300, def: 120, spd: 95 },
   5: { hp: 1550, atk: 390, def: 160, spd: 100 },
@@ -25,10 +14,7 @@ export const RARITY_BASE: Record<
 };
 
 /** 전투 유형별 배율 */
-export const ARCHETYPE_MUL: Record<
-  Archetype,
-  { hp: number; atk: number; def: number; spd: number }
-> = {
+export const ARCHETYPE_MUL: Record<Archetype, { hp: number; atk: number; def: number; spd: number }> = {
   striker: { hp: 0.9, atk: 1.25, def: 0.85, spd: 1.05 },
   tank: { hp: 1.4, atk: 0.75, def: 1.5, spd: 0.9 },
   healer: { hp: 0.95, atk: 0.8, def: 0.9, spd: 1.0 },
@@ -46,132 +32,20 @@ export const POSITION_MUL = {
 
 /** 역할 이름(월드 언어)에서 전투 유형을 짐작하는 낱말. 위에서부터 먼저 맞는 것 */
 const ARCHETYPE_WORDS: [Archetype, string[]][] = [
-  [
-    "healer",
-    [
-      "heal",
-      "medic",
-      "cleric",
-      "priest",
-      "cure",
-      "restor",
-      "치료",
-      "힐",
-      "회복",
-      "의무",
-      "치유",
-      "사제",
-      "衛生",
-      "医",
-      "治",
-      "癒",
-      "回復",
-      "回复",
-    ],
-  ],
-  [
-    "tank",
-    [
-      "tank",
-      "guard",
-      "defend",
-      "defens",
-      "protect",
-      "shield",
-      "bulwark",
-      "vanguard",
-      "방어",
-      "탱",
-      "수호",
-      "방패",
-      "호위",
-      "守",
-      "防",
-      "盾",
-      "重装",
-    ],
-  ],
-  ["summoner", ["summon", "conjur", "familiar", "소환", "召"]],
-  [
-    "controller",
-    [
-      "control",
-      "crowd",
-      "cc",
-      "debuff",
-      "disrupt",
-      "trap",
-      "hex",
-      "제어",
-      "군중",
-      "방해",
-      "디버프",
-      "약화",
-      "함정",
-      "妨害",
-      "控制",
-      "制御",
-    ],
-  ],
-  [
-    "support",
-    [
-      "support",
-      "buff",
-      "bard",
-      "assist",
-      "utility",
-      "tactic",
-      "지원",
-      "보조",
-      "버프",
-      "전술",
-      "支援",
-      "辅助",
-      "補助",
-    ],
-  ],
-  [
-    "striker",
-    [
-      "dps",
-      "damage",
-      "attack",
-      "assault",
-      "striker",
-      "sniper",
-      "snipe",
-      "caster",
-      "mage",
-      "warrior",
-      "blade",
-      "duel",
-      "assassin",
-      "딜",
-      "공격",
-      "돌격",
-      "저격",
-      "암살",
-      "마법",
-      "전사",
-      "검",
-      "攻",
-      "狙",
-      "暗殺",
-      "刺客",
-      "術",
-      "法",
-    ],
-  ],
+  ['healer', ['heal', 'medic', 'cleric', 'priest', 'cure', 'restor', '치료', '힐', '회복', '의무', '치유', '사제', '衛生', '医', '治', '癒', '回復', '回复']],
+  ['tank', ['tank', 'guard', 'defend', 'defens', 'protect', 'shield', 'bulwark', 'vanguard', '방어', '탱', '수호', '방패', '호위', '守', '防', '盾', '重装']],
+  ['summoner', ['summon', 'conjur', 'familiar', '소환', '召']],
+  ['controller', ['control', 'crowd', 'cc', 'debuff', 'disrupt', 'trap', 'hex', '제어', '군중', '방해', '디버프', '약화', '함정', '妨害', '控制', '制御']],
+  ['support', ['support', 'buff', 'bard', 'assist', 'utility', 'tactic', '지원', '보조', '버프', '전술', '支援', '辅助', '補助']],
+  ['striker', ['dps', 'damage', 'attack', 'assault', 'striker', 'sniper', 'snipe', 'caster', 'mage', 'warrior', 'blade', 'duel', 'assassin', '딜', '공격', '돌격', '저격', '암살', '마법', '전사', '검', '攻', '狙', '暗殺', '刺客', '術', '法']],
 ];
 
 export function guessArchetype(roles: readonly string[]): Archetype {
   for (const role of roles) {
     const r = role.toLowerCase();
-    for (const [arch, words] of ARCHETYPE_WORDS)
-      if (words.some((w) => r.includes(w))) return arch;
+    for (const [arch, words] of ARCHETYPE_WORDS) if (words.some((w) => r.includes(w))) return arch;
   }
-  return "specialist";
+  return 'specialist';
 }
 
 /** 문자열 → 32비트 시드 (FNV-1a) */
@@ -188,12 +62,7 @@ export function seedFrom(s: string): number {
  * 같은 id면 항상 같은 값. 각 수치에 ±5% 흔들림.
  * 근거리: 사거리 1, 저지 2~3 (방어형은 3) / 원거리: 사거리 3~4, 저지 0~1
  */
-export function computeStats(
-  id: string,
-  rarity: Rarity,
-  archetype: Archetype,
-  melee: boolean,
-): CombatStats {
+export function computeStats(id: string, rarity: Rarity, archetype: Archetype, melee: boolean): CombatStats {
   const rng = createRng(seedFrom(id));
   const jitter = () => 0.95 + rng.next() * 0.1;
   const base = RARITY_BASE[rarity];
@@ -205,22 +74,8 @@ export function computeStats(
   const spd = Math.round(base.spd * am.spd * pm.spd * jitter());
   const roll = rng.next();
   if (melee) {
-    return {
-      hp,
-      atk,
-      def,
-      spd,
-      range: 1,
-      block: archetype === "tank" ? 3 : roll < 0.5 ? 2 : 3,
-    };
+    return { hp, atk, def, spd, range: 1, block: archetype === 'tank' ? 3 : roll < 0.5 ? 2 : 3 };
   }
   const roll2 = rng.next();
-  return {
-    hp,
-    atk,
-    def,
-    spd,
-    range: roll < 0.5 ? 3 : 4,
-    block: roll2 < 0.5 ? 0 : 1,
-  };
+  return { hp, atk, def, spd, range: roll < 0.5 ? 3 : 4, block: roll2 < 0.5 ? 0 : 1 };
 }

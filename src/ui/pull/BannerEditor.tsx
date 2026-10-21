@@ -482,7 +482,9 @@ export function BannerEditor({
       // 실패·취소해도 그때까지 만든 캐릭터는 픽업에 넣는다
       const made = (
         await db.characters.where("worldId").equals(world.id).toArray()
-      ).filter((c) => !before.has(c.id));
+      )
+        .filter((c) => !before.has(c.id))
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
       if (made.length) {
         setFresh((s) => new Set([...s, ...made.map((c) => c.id)]));
         setDraft((d) => ({
@@ -766,7 +768,7 @@ export function BannerEditor({
               </span>
             </div>
             <div
-              className="meter running"
+              className="meter be-meter"
               role="progressbar"
               aria-valuemin={0}
               aria-valuemax={gen.total}

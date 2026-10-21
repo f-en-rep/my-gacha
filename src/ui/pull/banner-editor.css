@@ -217,7 +217,7 @@
   gap: 6px 12px;
   font-size: 14px;
 }
-.meter.running span {
+.be-meter span {
   transition: width 0.3s;
   background: repeating-linear-gradient(135deg, var(--ink) 0 8px, #3a3a40 8px 16px);
   background-size: 22.6px 100%;
@@ -229,7 +229,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .meter.running span {
+  .be-meter span {
     animation: none;
   }
 }
@@ -262,4 +262,9 @@ ul.form-errors {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+.pl-new-banner[aria-current='true'] {
+  border: 1px solid var(--ink);
+  background: var(--accent-soft);
+  color: var(--ink);
 }
