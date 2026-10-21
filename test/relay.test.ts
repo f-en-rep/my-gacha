@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { filterRequestHeaders, onRequest, parseAllowedTarget } from './relay';
+import { filterRequestHeaders, onRequest, parseAllowedTarget } from '../functions/api/relay';
 
 const SELF = 'https://my-gacha.pages.dev';
 
