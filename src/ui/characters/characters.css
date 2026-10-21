@@ -172,7 +172,7 @@
   color: var(--ink-2);
 }
 
-.cc-card[data-owned='false'] .cc-art > :is(img, svg.silhouette) {
+.cc-card[data-owned='false'] .cc-art > :is(img:not(.card-art), svg.silhouette) {
   opacity: 0.38;
   filter: grayscale(1);
 }
@@ -412,4 +412,10 @@
 .cd-stats td {
   font-family: var(--mono);
   font-weight: 600;
+}
+
+/* 초상화가 없을 때의 기본 카드 그림: 틀을 꽉 채운다 */
+.card-art {
+  object-fit: cover !important;
+  object-position: center !important;
 }

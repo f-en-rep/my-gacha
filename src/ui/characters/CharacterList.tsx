@@ -124,7 +124,7 @@ export function CharacterList({
                   data-owned={owned ? 'true' : 'false'}
                 >
                   <span className="cc-art">
-                    <Portrait assetId={c.portraitId} alt="" silhouetteClass="silhouette" />
+                    <Portrait assetId={c.portraitId} alt="" silhouetteClass="silhouette" rarity={c.rarity} locked={!owned} />
                     <RarityBadge rarity={c.rarity} className="cc-rarity" />
                     {!owned && (
                       <span className="cc-lock" aria-label="미보유">

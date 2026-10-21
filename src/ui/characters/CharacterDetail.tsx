@@ -65,7 +65,7 @@ export function CharacterDetail({ character: c, save, no }: { character: Charact
       <span className="kicker">OPERATOR FILE · No.{String(no).padStart(3, '0')}</span>
 
       <div className="cd-art" data-owned={owned ? 'true' : 'false'} aria-busy={busy || undefined}>
-        <Portrait assetId={c.portraitId} alt={`${c.name} 초상화`} className="cd-img" silhouetteClass="silhouette" />
+        <Portrait assetId={c.portraitId} alt={`${c.name} 초상화`} className="cd-img" silhouetteClass="silhouette" rarity={c.rarity} locked={!owned && !c.portraitId} />
         {busy && (
           <span className="cd-busy" role="status">
             <span className="pill pill-run">그리는 중</span>

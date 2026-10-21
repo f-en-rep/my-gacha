@@ -1,6 +1,7 @@
 // 뽑기 화면에서 쓰는 작은 그림 조각: 초상화(없으면 실루엣), 별, 배너 그림, 배너 열림 상태.
 import { useAssetUrl } from '../../game/store';
 import type { Banner, Character, Rarity } from '../../types';
+import { cardFront } from '../cards';
 
 export function Silhouette({ className = '' }: { className?: string }) {
   return (
@@ -16,7 +17,13 @@ export function Portrait({ character, className = '' }: { character: Character |
   const url = useAssetUrl(character?.portraitId);
   return (
     <div className={'pl-portrait ' + className}>
-      {url ? <img src={url} alt="" loading="lazy" decoding="async" /> : <Silhouette />}
+      {url ? (
+        <img src={url} alt="" loading="lazy" decoding="async" />
+      ) : character ? (
+        <img className="pl-card-art" src={cardFront(character.rarity)} alt="" loading="lazy" decoding="async" />
+      ) : (
+        <Silhouette />
+      )}
     </div>
   );
 }

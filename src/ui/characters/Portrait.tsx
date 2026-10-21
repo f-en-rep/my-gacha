@@ -1,6 +1,7 @@
 // 캐릭터 초상화와 희귀도 표시. 캐릭터 패널과 로비가 같이 쓴다.
 import { useAssetUrl } from '../../game/store';
 import type { Id, Rarity } from '../../types';
+import { CARD_LOCKED, cardFront } from '../cards';
 import './characters.css';
 
 /** 초상화가 없을 때의 빈 칸 (실루엣) */
@@ -13,11 +14,30 @@ export function Silhouette({ className }: { className?: string }) {
   );
 }
 
-/** 저장된 초상화. 없거나 아직 못 읽었으면 실루엣 */
-export function Portrait({ assetId, alt, className, silhouetteClass }: { assetId?: Id; alt: string; className?: string; silhouetteClass?: string }) {
-  const url = useAssetUrl(assetId);
-  if (!url) return <Silhouette className={silhouetteClass} />;
-  return <img className={className ?? 'portrait-img'} src={url} alt={alt} draggable={false} />;
+/**
+ * 저장된 초상화. 미보유(locked)면 검은 카드, 초상화가 없으면 희귀도 카드, 희귀도도 모르면 실루엣.
+ */
+export function Portrait({
+  assetId,
+  alt,
+  className,
+  silhouetteClass,
+  rarity,
+  locked,
+}: {
+  assetId?: Id;
+  alt: string;
+  className?: string;
+  silhouetteClass?: string;
+  rarity?: Rarity;
+  locked?: boolean;
+}) {
+  const url = useAssetUrl(locked ? undefined : assetId);
+  const cls = className ?? 'portrait-img';
+  if (url) return <img className={cls} src={url} alt={alt} draggable={false} />;
+  if (locked) return <img className={cls + ' card-art'} src={CARD_LOCKED} alt="" draggable={false} />;
+  if (rarity) return <img className={cls + ' card-art'} src={cardFront(rarity)} alt="" draggable={false} />;
+  return <Silhouette className={silhouetteClass} />;
 }
 
 export function RarityBadge({ rarity, className }: { rarity: Rarity; className?: string }) {

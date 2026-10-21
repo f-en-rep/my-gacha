@@ -881,3 +881,24 @@
     transform: translate(-50%, -50%) rotate(-8deg) scaleY(1);
   }
 }
+
+/* 기본 카드 그림 (public/cards): 뒤집히기 전 뒷면은 희귀도별 카드 */
+.pl-rcard-back {
+  background: url('/cards/back-common.webp') center / cover;
+  box-shadow: none !important;
+}
+.pl-rcard[data-rarity='3'] .pl-rcard-back {
+  background-image: url('/cards/back-3.webp');
+}
+.pl-rcard[data-rarity='4'] .pl-rcard-back {
+  background-image: url('/cards/back-4.webp');
+}
+.pl-rcard[data-rarity='5'] .pl-rcard-back {
+  background-image: url('/cards/back-5.webp');
+}
+.pl-rcard[data-rarity='6'] .pl-rcard-back {
+  background-image: url('/cards/back-6.webp');
+}
+.pl-rcard-mark {
+  display: none;
+}

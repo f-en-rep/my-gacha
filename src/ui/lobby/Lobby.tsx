@@ -5,7 +5,8 @@ import { paths } from '../router';
 import { db } from '../../db';
 import { DAILY_PULL_CURRENCY, rulesFor, today, useActiveGame, useCast, useWorlds } from '../../game/store';
 import { now } from '../../core/id';
-import { Portrait, Silhouette } from '../characters/Portrait';
+import { Portrait } from '../characters/Portrait';
+import { CARD_BACK_COMMON } from '../cards';
 import type { Character, Id, Save } from '../../types';
 import './lobby-extra.css';
 
@@ -139,11 +140,11 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
       <div className="lobby-stage">
         <div className="stage-frame">
           <div className="stage-motif" aria-hidden="true" />
-          <div className={'stage-art' + (featured?.portraitId ? ' has-portrait' : '')}>
+          <div className="stage-art has-portrait">
             {featured ? (
-              <Portrait assetId={featured.portraitId} alt={featured.name} className="stage-portrait" silhouetteClass="lobby-figure" />
+              <Portrait assetId={featured.portraitId} alt={featured.name} className="stage-portrait" silhouetteClass="lobby-figure" rarity={featured.rarity} />
             ) : (
-              <Silhouette className="lobby-figure" />
+              <img className="stage-portrait card-art" src={CARD_BACK_COMMON} alt="" draggable={false} />
             )}
             <span className="stage-caption">{featured ? featured.name : '대표 캐릭터 자리'}</span>
           </div>
