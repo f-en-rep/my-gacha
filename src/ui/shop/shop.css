@@ -177,13 +177,14 @@
   letter-spacing: -0.02em;
 }
 
-.sh-back {
+.sh-right-head .sh-back {
   margin-left: -6px;
   border-color: var(--rule);
 }
 
+/* 넓은 화면은 두 페이지가 다 보이니 뒤로 버튼이 필요 없다 */
 @media (min-width: 1000px) {
-  .sh-back {
+  .sh-right-head .sh-back {
     display: none;
   }
 }
@@ -224,7 +225,7 @@
   gap: 8px;
 }
 
-.sh-step {
+.sh-counter .sh-step {
   padding: 0;
   font-size: 22px;
   font-weight: 500;
@@ -261,7 +262,7 @@
   pointer-events: none;
 }
 
-.sh-max {
+.sh-counter .sh-max {
   padding: 0 14px;
 }
 
@@ -307,11 +308,9 @@
   color: var(--fail);
 }
 
-.sh-buy {
+.sh-bundle .sh-buy {
   min-height: 56px;
   font-size: 16px;
-  justify-content: space-between;
-  padding: 0 18px;
 }
 
 .sh-buy .mono {
