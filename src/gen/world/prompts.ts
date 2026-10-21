@@ -105,6 +105,15 @@ export interface CharacterPromptOptions {
   detail: 'full' | 'light';
   /** 같은 희귀도 안에서 몇 번째인지 (한 명씩 만들 때 1부터) */
   index?: number;
+  /** 새 배너의 주제 (플레이어가 적은 글, 예: "여름 축제 한정"). 있으면 캐릭터를 이 주제에 맞춘다 */
+  brief?: string;
+}
+
+/** 새 배너 주제 블록. 주제가 없으면 빈 글 */
+function themeBlock(brief: string | undefined, forWhat: string): string {
+  const b = brief?.trim();
+  if (!b) return '';
+  return `Theme of the new recruitment banner (written by the player — follow it): ${b}\n${forWhat}`;
 }
 
 function castLine(c: Character): string {
@@ -163,6 +172,10 @@ export function characterMessages(world: World, cast: Character[], opts: Charact
     `Tag catalog — use ONLY these exact values:\n${catalogBlock(world.tags)}`,
     castBlock,
     balanceHint(cast, world.tags),
+    themeBlock(
+      opts.brief,
+      'Design the new character(s) around this theme (look, outfit, story hook) while keeping them consistent with the world and the tag catalog.',
+    ),
     `${what}\nRarity ${rarity}★${trait ? ` (rank label "${trait}")` : ''}: ${RARITY_FLAVOR[rarity]}`,
     [
       `Field rules:`,
@@ -177,6 +190,40 @@ export function characterMessages(world: World, cast: Character[], opts: Charact
     .filter(Boolean)
     .join('\n\n');
 
+  return [
+    { role: 'system', content: SYSTEM_BASE },
+    { role: 'user', content: user },
+  ];
+}
+
+// ---------- 새 배너 이름·소개 ----------
+
+export interface BannerMetaPromptOptions {
+  brief?: string;
+  /** 픽업 캐릭터 이름 (6★ 먼저) */
+  featuredNames: string[];
+  kind?: 'standard' | 'limited';
+}
+
+export function bannerMetaMessages(world: World, opts: BannerMetaPromptOptions): ChatMessage[] {
+  const lang = languageName(world.language);
+  const kind = opts.kind === 'standard' ? 'an always-open standard recruitment banner' : 'a limited-time recruitment banner';
+  const user = [
+    '[task: banner-meta]',
+    worldBlock(world),
+    `We are opening ${kind} in this game.`,
+    opts.featuredNames.length ? `Featured (rate-up) characters: ${opts.featuredNames.join(', ')}` : 'No featured characters chosen yet.',
+    themeBlock(opts.brief, 'The banner name and description must reflect this theme.'),
+    [
+      'Field rules:',
+      `- Write in ${lang}.`,
+      '- "name": a short, catchy banner title (2–6 words), like gacha games use. No quotes, no rarity stars, no dates.',
+      '- "description": 1–2 short sentences inviting the player, hinting at the featured characters and the theme.',
+    ].join('\n'),
+    'Return JSON exactly in this shape:\n{"name": "", "description": ""}',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
   return [
     { role: 'system', content: SYSTEM_BASE },
     { role: 'user', content: user },

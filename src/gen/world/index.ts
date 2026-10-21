@@ -4,8 +4,10 @@ import { newId, now } from '../../core/id';
 import { describeTextError, generateJson } from '../text';
 import { SCHEMA_VERSION } from '../../types';
 import type { Banner, Character, Id, Rarity, TextProfile, World } from '../../types';
-import { characterMessages, setupMessages } from './prompts';
-import { characterListSchema, setupSchema, type CharacterDraft } from './schema';
+import { bannerMetaMessages, characterMessages, setupMessages, type BannerMetaPromptOptions, type CharacterPromptOptions } from './prompts';
+import { bannerMetaSchema, characterListSchema, setupSchema, type BannerMeta, type CharacterDraft } from './schema';
+
+export type { BannerMeta } from './schema';
 import { computeStats, guessArchetype } from './stats';
 import { positionIndex, traitForRarity } from './tags';
 
@@ -238,19 +240,105 @@ export async function generateWorld(worldId: Id, opts: GenerateOptions = {}): Pr
   }
 
   async function createCharacters(world: World, cast: Character[], rarity: Rarity, count: number, detail: 'full' | 'light', index?: number) {
-    const p = await getProfile();
-    const promptOpts = index === undefined ? { rarity, count, detail } : { rarity, count, detail, index };
-    const schema = characterListSchema({ catalog: world.tags, count, detail, existingNames: cast.map((c) => c.name) });
-    const { value } = await generateJson(p, characterMessages(world, cast, promptOpts), schema, {
-      signal,
-      maxTokens: p.maxTokens ?? 8192,
-      temperature: p.temperature ?? 0.9,
-    });
-    signal?.throwIfAborted();
-    const chars = value.slice(0, count).map((d) => draftToCharacter(d, world, rarity, detail));
-    await db.transaction('rw', db.characters, db.worlds, async () => {
-      await db.characters.bulkAdd(chars);
-      await db.worlds.update(worldId, { updatedAt: now() });
-    });
+    await addCharacters(await getProfile(), world, cast, { rarity, count, detail, index, signal });
   }
+}
+
+/** 캐릭터 count명을 한 번의 호출로 만들어 저장하고 id를 돌려준다 (월드 생성과 새 배너가 같이 쓴다) */
+async function addCharacters(
+  p: TextProfile,
+  world: World,
+  cast: Character[],
+  o: { rarity: Rarity; count: number; detail: 'full' | 'light'; index?: number; brief?: string; signal?: AbortSignal },
+): Promise<Id[]> {
+  const { rarity, count, detail, signal } = o;
+  const promptOpts: CharacterPromptOptions = { rarity, count, detail };
+  if (o.index !== undefined) promptOpts.index = o.index;
+  if (o.brief?.trim()) promptOpts.brief = o.brief.trim();
+  const schema = characterListSchema({ catalog: world.tags, count, detail, existingNames: cast.map((c) => c.name) });
+  const { value } = await generateJson(p, characterMessages(world, cast, promptOpts), schema, {
+    signal,
+    maxTokens: p.maxTokens ?? 8192,
+    temperature: p.temperature ?? 0.9,
+  });
+  signal?.throwIfAborted();
+  const chars = value.slice(0, count).map((d) => draftToCharacter(d, world, rarity, detail));
+  await db.transaction('rw', db.characters, db.worlds, async () => {
+    await db.characters.bulkAdd(chars);
+    await db.worlds.update(world.id, { updatedAt: now() });
+  });
+  return chars.map((c) => c.id);
+}
+
+// ---------- 새 배너용: 이미 준비된 월드에 캐릭터 추가, 배너 이름 짓기 ----------
+
+export interface GenerateCharactersOptions {
+  rarity: Rarity;
+  count: number;
+  /** 새 배너의 주제 (플레이어가 적은 글). 프롬프트에 배너 주제로 들어간다 */
+  brief?: string;
+  signal?: AbortSignal;
+  /** 진행 상황 (단계 이름, 끝난 수, 전체 수) */
+  onProgress?: (stage: string, done: number, total: number) => void;
+}
+
+async function loadReadyWorld(worldId: Id): Promise<World> {
+  const w = await db.worlds.get(worldId);
+  if (!w) throw new Error('월드를 찾을 수 없습니다.');
+  if (w.status !== 'ready') throw new Error('월드가 아직 준비되지 않았습니다. 월드 생성을 먼저 마쳐 주세요.');
+  return w;
+}
+
+/**
+ * 준비된 월드에 새 캐릭터를 더한다 (월드 생성과 같은 프롬프트·검사·능력치, 지금까지의 캐스트와 겹치지 않게).
+ * 6★·5★는 한 명씩 자세한 시트, 4★·3★는 한 번에 묶어 짧은 시트. 만든 캐릭터 id를 돌려준다.
+ * 한 명씩 만들 때 중간에 실패·취소하면 그때까지 만든 캐릭터는 남는다.
+ * 월드 status·genProgress는 건드리지 않는다.
+ */
+export async function generateCharacters(worldId: Id, opts: GenerateCharactersOptions): Promise<Id[]> {
+  const { rarity, brief, signal, onProgress } = opts;
+  const count = Math.max(0, Math.floor(opts.count));
+  if (count === 0) return [];
+  const world = await loadReadyWorld(worldId);
+  const p = await resolveStructuredProfile();
+  signal?.throwIfAborted();
+
+  const ids: Id[] = [];
+  if (SINGLE_RARITIES.includes(rarity)) {
+    for (let i = 0; i < count; i++) {
+      signal?.throwIfAborted();
+      onProgress?.(`${rarity}★ 캐릭터 ${i + 1}/${count}`, i, count);
+      const cast = await castOf(worldId);
+      ids.push(...(await addCharacters(p, world, cast, { rarity, count: 1, detail: 'full', brief, signal })));
+    }
+  } else {
+    onProgress?.(`${rarity}★ 캐릭터 ${count}명`, 0, count);
+    const cast = await castOf(worldId);
+    ids.push(...(await addCharacters(p, world, cast, { rarity, count, detail: 'light', brief, signal })));
+  }
+  onProgress?.('완료', count, count);
+  return ids;
+}
+
+export interface BannerMetaOptions {
+  brief?: string;
+  /** 픽업 캐릭터 이름 (6★ 먼저) */
+  featuredNames: string[];
+  kind?: 'standard' | 'limited';
+  signal?: AbortSignal;
+}
+
+/** 새 배너의 이름과 소개를 한 번의 짧은 호출로 짓는다 (월드 언어) */
+export async function generateBannerMeta(worldId: Id, opts: BannerMetaOptions): Promise<BannerMeta> {
+  const world = await loadReadyWorld(worldId);
+  const p = await resolveStructuredProfile();
+  const promptOpts: BannerMetaPromptOptions = { featuredNames: opts.featuredNames };
+  if (opts.brief?.trim()) promptOpts.brief = opts.brief.trim();
+  if (opts.kind) promptOpts.kind = opts.kind;
+  const { value } = await generateJson(p, bannerMetaMessages(world, promptOpts), bannerMetaSchema(), {
+    signal: opts.signal,
+    maxTokens: p.maxTokens ?? 4096,
+    temperature: p.temperature ?? 0.9,
+  });
+  return value;
 }
