@@ -1,6 +1,6 @@
 // 월드 팩과 세이브 백업.
 // 월드 팩: 월드 + 캐릭터 + 배너 + 그림 (+ 선택: 스토리). 진행과 API 키는 절대 넣지 않는다.
-// 세이브 백업: 월드 팩 전부 + 그 월드의 세이브와 뽑기 기록. API 키는 넣지 않는다.
+// 세이브 백업: 월드 팩 전부 + 그 월드의 세이브, 뽑기 기록, 1:1 대화. API 키는 넣지 않는다.
 //
 // zip 안의 모양:
 //   manifest.json          형식, 버전, 월드 이름, 그림 목록
@@ -13,6 +13,7 @@
 //   story/locations/<id>.json  Location
 //   saves/<id>.json        Save            (백업만)
 //   pulls.json             PullRecord[]    (백업만)
+//   chats.json             ChatLine[]      (백업만. 세이브의 호감도 bonds는 saves/ 안에)
 //
 // 가져올 때는 월드·캐릭터·배너·그림·챕터·장면·장소·세이브 id를 전부 새로 만들고 참조를 바꿔 끼운다.
 // 그래서 같은 팩을 두 번 가져와도 서로 다른 월드가 된다.
@@ -27,6 +28,7 @@ import {
   type Banner,
   type Beat,
   type Chapter,
+  type ChatLine,
   type Character,
   type Id,
   type Location,
@@ -42,6 +44,7 @@ import {
   beatSchema,
   chapterSchema,
   characterSchema,
+  chatsFileSchema,
   locationSchema,
   manifestSchema,
   pullsFileSchema,
@@ -85,14 +88,18 @@ export async function exportBackup(worldId: Id): Promise<{ blob: Blob; filename:
   const data = await collectWorld(worldId);
   const saves = await db.saves.where('worldId').equals(worldId).toArray();
   const pulls: Omit<PullRecord, 'id'>[] = [];
+  const chats: Omit<ChatLine, 'id'>[] = [];
   for (const s of saves) {
     const list = await db.pulls.where('saveId').equals(s.id).sortBy('id');
     for (const { id: _auto, ...rest } of list) pulls.push(rest);
+    const lines = await db.chatLines.where('saveId').equals(s.id).sortBy('id');
+    for (const { id: _auto, ...rest } of lines) chats.push(rest);
   }
   // 백업에는 스토리가 항상 들어간다 (세이브의 읽은 위치가 챕터 id를 가리키므로)
   const files = await worldEntries(data, BACKUP_FORMAT, { includeStory: true }, saves.length);
   for (const s of saves) files[`saves/${safeName(s.id)}.json`] = json(s);
   files['pulls.json'] = json(pulls);
+  files['chats.json'] = json(chats);
   const blob = toZip(files);
   const s = await getSettings();
   await db.settings.put({ ...s, lastBackupAt: now() });
@@ -215,7 +222,7 @@ export async function importWorldPack(file: Blob): Promise<Id> {
   const manifest = readManifest(files, PACK_FORMAT);
   const prepared = await prepareWorld(files, manifest, packName(file, manifest));
   const save = newSave(prepared.world.id);
-  await writeAll(prepared, [save], []);
+  await writeAll(prepared, [save], [], []);
   return prepared.world.id;
 }
 
@@ -257,6 +264,14 @@ export async function importBackup(file: Blob): Promise<Id> {
         if (cid) story[cid] = v;
       }
     }
+    let bonds: Save['bonds'];
+    if (s.bonds) {
+      bonds = {};
+      for (const [k, v] of Object.entries(s.bonds)) {
+        const cid = charMap.get(k);
+        if (cid) bonds[cid] = v;
+      }
+    }
     saves.push({
       ...s,
       id: sid,
@@ -266,6 +281,7 @@ export async function importBackup(file: Blob): Promise<Id> {
       banners,
       featuredCharacterId: featured,
       story,
+      bonds,
     });
   }
   if (!saves.length) saves.push(newSave(world.id));
@@ -279,7 +295,15 @@ export async function importBackup(file: Blob): Promise<Id> {
       if (saveId && bannerId && characterId) pulls.push({ ...r, saveId, bannerId, characterId });
     }
   }
-  await writeAll(prepared, saves, pulls);
+  const chats: ChatLine[] = [];
+  if (files['chats.json']) {
+    for (const l of parseJson(files, 'chats.json', chatsFileSchema)) {
+      const saveId = saveMap.get(l.saveId);
+      const characterId = charMap.get(l.characterId);
+      if (saveId && characterId) chats.push({ ...l, saveId, characterId });
+    }
+  }
+  await writeAll(prepared, saves, pulls, chats);
   return world.id;
 }
 
@@ -498,8 +522,8 @@ async function prepareWorld(files: Files, manifest: Manifest, name: string): Pro
 }
 
 /** 전부 한 트랜잭션으로. 중간에 실패하면 아무것도 남지 않는다 */
-async function writeAll(p: Prepared, saves: Save[], pulls: PullRecord[]): Promise<void> {
-  const tables = [db.worlds, db.characters, db.banners, db.assets, db.saves, db.pulls, db.chapters, db.beats, db.locations];
+async function writeAll(p: Prepared, saves: Save[], pulls: PullRecord[], chats: ChatLine[]): Promise<void> {
+  const tables = [db.worlds, db.characters, db.banners, db.assets, db.saves, db.pulls, db.chapters, db.beats, db.locations, db.chatLines];
   await db.transaction('rw', tables, async () => {
     await db.worlds.add(p.world);
     await db.characters.bulkAdd(p.characters);
@@ -510,5 +534,6 @@ async function writeAll(p: Prepared, saves: Save[], pulls: PullRecord[]): Promis
     if (p.beats.length) await db.beats.bulkAdd(p.beats);
     await db.saves.bulkAdd(saves);
     if (pulls.length) await db.pulls.bulkAdd(pulls);
+    if (chats.length) await db.chatLines.bulkAdd(chats);
   });
 }

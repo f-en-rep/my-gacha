@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { db } from '../db';
-import { SCHEMA_VERSION, type Asset, type Banner, type Beat, type Chapter, type Character, type Location, type PullRecord, type Save, type World } from '../types';
+import { SCHEMA_VERSION, type Asset, type Banner, type Beat, type Chapter, type Character, type ChatLine, type Location, type PullRecord, type Save, type World } from '../types';
 import { exportBackup, exportWorldPack, importBackup, importWorldPack, packFilename, PackError } from './index';
 
 const T = '2026-10-01T00:00:00.000Z';
@@ -433,6 +433,86 @@ describe('스토리', () => {
     await expect(importWorldPack(zipBlob(files))).rejects.toThrow(/story\/beats\/bt1.json 내용이 올바르지 않습니다/);
     expect(await db.worlds.count()).toBe(n);
     expect(await db.chapters.count()).toBe(chapters);
+  });
+});
+
+describe('대화와 호감도', () => {
+  beforeEach(async () => {
+    const lines: ChatLine[] = [
+      { saveId: 's1', characterId: 'c6', role: 'user', text: '안녕', at: T },
+      { saveId: 's1', characterId: 'c6', role: 'char', text: '반가워!', at: T },
+      { saveId: 's1', characterId: 'ghost', role: 'user', text: '없는 캐릭터', at: T },
+      { saveId: 'other', characterId: 'c6', role: 'user', text: '다른 세이브', at: T },
+    ];
+    await db.chatLines.bulkAdd(lines);
+    await db.saves.update('s1', {
+      playerName: '별지기 민',
+      bonds: {
+        c6: { points: 120, claimed: [1, 2], today: { day: '2026-10-21', points: 30 } },
+        c3: { points: 5, claimed: [] },
+        ghost: { points: 999, claimed: [1] },
+      },
+    });
+  });
+
+  it('백업 왕복: 대화와 호감도가 새 id로 이어진다', async () => {
+    const { blob } = await exportBackup('w1');
+    const files = await unzipBlob(blob);
+    const chats = JSON.parse(strFromU8(files['chats.json']!));
+    // 이 월드 세이브의 대화만, 자동 번호 없이
+    expect(chats).toHaveLength(3);
+    expect(chats.every((l: ChatLine) => l.saveId === 's1' && l.id === undefined)).toBe(true);
+
+    const id = await importBackup(blob);
+    const chars = await db.characters.where('worldId').equals(id).toArray();
+    const byRarity = (r: number) => chars.find((c) => c.rarity === r)!;
+    const [save] = await db.saves.where('worldId').equals(id).toArray();
+    expect(save!.playerName).toBe('별지기 민');
+    expect(save!.bonds).toEqual({
+      [byRarity(6).id]: { points: 120, claimed: [1, 2], today: { day: '2026-10-21', points: 30 } },
+      [byRarity(3).id]: { points: 5, claimed: [] },
+    });
+    const lines = await db.chatLines.where('saveId').equals(save!.id).sortBy('id');
+    expect(lines.map((l) => [l.characterId, l.role, l.text])).toEqual([
+      [byRarity(6).id, 'user', '안녕'],
+      [byRarity(6).id, 'char', '반가워!'],
+    ]);
+    // 원래 대화는 그대로
+    expect(await db.chatLines.where('saveId').equals('s1').count()).toBe(3);
+  });
+
+  it('월드 팩에는 대화도 호감도도 없다', async () => {
+    for (const includeStory of [false, true]) {
+      const files = await unzipBlob((await exportWorldPack('w1', { includeStory })).blob);
+      expect(Object.keys(files)).not.toContain('chats.json');
+      const all = Object.entries(files)
+        .filter(([n]) => n.endsWith('.json'))
+        .map(([, f]) => strFromU8(f))
+        .join('\n');
+      expect(all).not.toContain('반가워');
+      expect(all).not.toContain('bonds');
+      expect(all).not.toContain('별지기 민');
+    }
+    const id = await importWorldPack((await exportWorldPack('w1', { includeStory: true })).blob);
+    const [save] = await db.saves.where('worldId').equals(id).toArray();
+    expect(save!.bonds).toBeUndefined();
+    expect(await db.chatLines.where('saveId').equals(save!.id).count()).toBe(0);
+  });
+
+  it('chats.json 없는 예전 백업도 열린다', async () => {
+    const files = await unzipBlob((await exportBackup('w1')).blob);
+    delete files['chats.json'];
+    const id = await importBackup(zipBlob(files));
+    const [save] = await db.saves.where('worldId').equals(id).toArray();
+    expect(await db.chatLines.where('saveId').equals(save!.id).count()).toBe(0);
+  });
+
+  it('망가진 chats.json이면 아무것도 쓰지 않는다', async () => {
+    const n = await db.worlds.count();
+    const files = await unzipBlob((await exportBackup('w1')).blob);
+    files['chats.json'] = strToU8(JSON.stringify([{ saveId: 's1', characterId: 'c6', role: 'narrator', text: 'x', at: T }]));
+    await expect(importBackup(zipBlob(files))).rejects.toThrow(/chats.json 내용이 올바르지 않습니다/);
+    expect(await db.worlds.count()).toBe(n);
   });
 });
 
