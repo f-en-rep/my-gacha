@@ -279,7 +279,7 @@ describe('순수성과 재현성', () => {
     expect(r.records).toHaveLength(3);
     r.records.forEach((rec, i) => {
       const o = r.results[i]!;
-      expect(rec).toEqual({ bannerId: 'std1', characterId: o.character.id, rarity: o.rarity, pityBefore: o.pityBefore, isNew: o.isNew, at: NOW });
+      expect(rec).toEqual({ saveId: 's', bannerId: 'std1', characterId: o.character.id, rarity: o.rarity, pityBefore: o.pityBefore, isNew: o.isNew, at: NOW });
     });
   });
 });

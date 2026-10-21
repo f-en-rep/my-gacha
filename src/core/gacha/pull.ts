@@ -166,6 +166,7 @@ export function pull({ save, banner, cast, rules, count, now }: PullInput): Pull
 
     results.push({ character, rarity, featured, pityBefore, ...granted });
     records.push({
+      saveId: save.id,
       bannerId: banner.id,
       characterId: character.id,
       rarity,

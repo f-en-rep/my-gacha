@@ -1,5 +1,5 @@
 import { Icon } from '../Icon';
-import { useSetupSteps } from '../lobby/Lobby';
+import { useSetupSteps } from '../setup';
 import { Panel } from '../panel/Panel';
 
 const WORLD_MENU = [

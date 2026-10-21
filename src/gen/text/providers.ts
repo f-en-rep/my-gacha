@@ -9,6 +9,7 @@ export const DEFAULT_BASE_URLS: Record<TextProviderKind, string> = {
   'openai-compatible': '',
   anthropic: 'https://api.anthropic.com/v1',
   gemini: 'https://generativelanguage.googleapis.com/v1beta',
+  vertex: 'https://aiplatform.googleapis.com/v1',
 };
 
 export const ANTHROPIC_VERSION = '2023-06-01';
