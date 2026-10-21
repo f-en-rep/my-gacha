@@ -4,15 +4,16 @@ import { newId, now } from '../../core/id';
 import { describeTextError, generateJson } from '../text';
 import { SCHEMA_VERSION } from '../../types';
 import type { Banner, Character, Id, Rarity, TextProfile, World } from '../../types';
-import { bannerMetaMessages, characterMessages, setupMessages, type BannerMetaPromptOptions, type CharacterPromptOptions } from './prompts';
-import { bannerMetaSchema, characterListSchema, setupSchema, type BannerMeta, type CharacterDraft } from './schema';
+import { bannerMetaMessages, cardMessages, characterMessages, setupMessages, type BannerMetaPromptOptions, type CardPromptInput, type CharacterPromptOptions } from './prompts';
+import { bannerMetaSchema, cardSheetSchema, characterListSchema, setupSchema, type BannerMeta, type CardSheet, type CharacterDraft } from './schema';
 
-export type { BannerMeta } from './schema';
+export type { BannerMeta, CardSheet, CharacterDraft } from './schema';
+export type { CardPromptInput } from './prompts';
 import { computeStats, guessArchetype } from './stats';
 import { positionIndex, traitForRarity } from './tags';
 
 export { computeStats, guessArchetype, ARCHETYPES, type Archetype } from './stats';
-export { traitForRarity, positionIndex, TRAIT_RARITIES, DEFAULT_TRAITS, DEFAULT_POSITIONS } from './tags';
+export { traitForRarity, positionIndex, matchTag, TRAIT_RARITIES, DEFAULT_TRAITS, DEFAULT_POSITIONS } from './tags';
 
 /** 사용자가 마법사에서 입력하는 것 */
 export interface WorldInput {
@@ -341,4 +342,59 @@ export async function generateBannerMeta(worldId: Id, opts: BannerMetaOptions): 
     temperature: p.temperature ?? 0.9,
   });
   return value;
+}
+
+// ---------- 캐릭터 카드 가져오기, 직접 만들기 ----------
+
+export interface CardSheetOptions {
+  /** AI에게 희귀도도 권하게 한다 */
+  askRarity: boolean;
+  signal?: AbortSignal;
+}
+
+/** 카드 글을 이 월드의 캐릭터 시트로 정리한다 (저장은 하지 않는다) */
+export async function sheetFromCard(worldId: Id, card: CardPromptInput, opts: CardSheetOptions): Promise<CardSheet> {
+  const world = await loadReadyWorld(worldId);
+  const p = await resolveStructuredProfile();
+  const cast = await castOf(worldId);
+  const { value } = await generateJson(p, cardMessages(world, cast, card, { askRarity: opts.askRarity }), cardSheetSchema(world.tags), {
+    signal: opts.signal,
+    maxTokens: p.maxTokens ?? 8192,
+    temperature: p.temperature ?? 0.7,
+  });
+  return value;
+}
+
+export interface DraftCharacterOptions {
+  rarity: Rarity;
+  /** 정해 둔 이름. 비우면 AI가 짓는다 */
+  name?: string;
+  /** 한 줄 설명 */
+  concept?: string;
+  /** 고치는 중인 캐릭터 (캐스트 목록에서 뺀다) */
+  excludeId?: Id;
+  signal?: AbortSignal;
+}
+
+/** 캐릭터 한 명의 시트를 만들어 돌려준다 (저장은 하지 않는다). 직접 만들기의 "AI로 채우기" */
+export async function draftCharacter(worldId: Id, opts: DraftCharacterOptions): Promise<CharacterDraft> {
+  const world = await loadReadyWorld(worldId);
+  const p = await resolveStructuredProfile();
+  const cast = (await castOf(worldId)).filter((c) => c.id !== opts.excludeId);
+  const detail = SINGLE_RARITIES.includes(opts.rarity) ? 'full' : 'light';
+  const promptOpts: CharacterPromptOptions = { rarity: opts.rarity, count: 1, detail };
+  const name = opts.name?.trim();
+  if (name) promptOpts.name = name;
+  if (opts.concept?.trim()) promptOpts.concept = opts.concept.trim();
+  // 정해 둔 이름은 겹쳐도 받아 준다 (플레이어가 고른 것)
+  const existingNames = cast.map((c) => c.name).filter((n) => !name || n.trim() !== name);
+  const schema = characterListSchema({ catalog: world.tags, count: 1, detail, existingNames });
+  const { value } = await generateJson(p, characterMessages(world, cast, promptOpts), schema, {
+    signal: opts.signal,
+    maxTokens: p.maxTokens ?? 8192,
+    temperature: p.temperature ?? 0.9,
+  });
+  const d = value[0];
+  if (!d) throw new Error('캐릭터를 만들지 못했습니다.');
+  return name ? { ...d, name } : d;
 }

@@ -1,6 +1,6 @@
 // 모델 답변 검사 (zod). 너그럽게 받아서 정규화하고, 정말 틀린 것만 재시도 피드백으로 돌려보낸다.
 import { z, type ZodType } from 'zod';
-import type { ArtStyle, CurrencyNames, TagCatalog } from '../../types';
+import type { ArtStyle, CurrencyNames, Rarity, TagCatalog } from '../../types';
 import { ARCHETYPES, type Archetype } from './stats';
 import { defaultTraits, knownPositions, matchPosition, matchTag, normTag } from './tags';
 
@@ -225,6 +225,66 @@ function findList(raw: unknown): unknown[] | undefined {
   return undefined;
 }
 
+/** 캐릭터 시트의 이름 밖 칸들 (태그·외형·그림 태그·성격·배경·대사). 틀린 것은 ctx에 남긴다 */
+function readCharacterFields(c: Obj, ctx: Ctx, path: (string | number)[], catalog: TagCatalog, quoteLimit: number): Omit<CharacterDraft, 'name'> {
+  const posRaw = looseStr(pick(c, 'position', 'range', 'positionTag'));
+  const position = matchPosition(posRaw, catalog);
+  if (!position) issue(ctx, [...path, 'position'], `Must be one of: ${catalog.position.join(', ')} (got "${posRaw}").`);
+
+  const roleRaw = looseList(pick(c, 'role', 'roles', 'class', 'classes'), /[,\n、，;；/]/);
+  const role: string[] = [];
+  const badRoles: string[] = [];
+  for (const r of roleRaw) {
+    const m = matchTag(r, catalog.role);
+    if (m) {
+      if (!role.includes(m)) role.push(m);
+    } else badRoles.push(r);
+  }
+  if (badRoles.length) issue(ctx, [...path, 'roles'], `Unknown role(s) ${badRoles.map((r) => `"${r}"`).join(', ')}. Use only: ${catalog.role.join(', ')}.`);
+  else if (role.length === 0) issue(ctx, [...path, 'roles'], `Pick 1–2 roles from: ${catalog.role.join(', ')}.`);
+
+  const elRaw = looseStr(pick(c, 'element', 'attribute', 'affinity', 'elements'));
+  const element = matchTag(elRaw, catalog.element);
+  if (!element) issue(ctx, [...path, 'element'], `Must be one of: ${catalog.element.join(', ')} (got "${elRaw}").`);
+
+  const archRaw = normTag(looseStr(pick(c, 'archetype', 'combatArchetype', 'combatRole')));
+  const archetype = ARCHETYPES.find((a) => a === archRaw || (archRaw.length >= 4 && (a.startsWith(archRaw) || archRaw.startsWith(a))));
+
+  const appearance = looseStr(pick(c, 'appearance', 'look', 'looks', 'visual', 'description'));
+  if (!appearance) issue(ctx, [...path, 'appearance'], 'Required.');
+
+  const tagParts = cleanTags(looseList(pick(c, 'imageTags', 'imagePrompt', 'danbooruTags', 'artTags', 'promptTags')));
+  if (tagParts.nonAscii.length) issue(ctx, [...path, 'imageTags'], `imageTags must be English tags only; replace: ${tagParts.nonAscii.join(', ')}`);
+  else if (tagParts.ascii.length < 5) issue(ctx, [...path, 'imageTags'], 'Need at least 5 English comma-separated tags (subject count, hair, eyes, build, outfit, accessories).');
+  else if (!tagParts.ascii.some((t) => SUBJECT_TAG.test(t))) issue(ctx, [...path, 'imageTags'], 'Start imageTags with a subject count tag: 1girl, 1boy or 1other.');
+  // 주제 태그를 맨 앞으로
+  const subjectFirst = [...tagParts.ascii.filter((t) => SUBJECT_TAG.test(t)), ...tagParts.ascii.filter((t) => !SUBJECT_TAG.test(t))];
+
+  const personality = looseStr(pick(c, 'personality', 'temperament', 'persona'));
+  if (!personality) issue(ctx, [...path, 'personality'], 'Required.');
+  const background = looseStr(pick(c, 'background', 'backstory', 'story', 'history', 'bio', 'biography'), '\n\n');
+  if (!background) issue(ctx, [...path, 'background'], 'Required.');
+
+  const quotes = looseList(pick(c, 'quotes', 'quote', 'lines', 'voiceLines', 'dialogue', 'sampleQuotes'), /\n+/)
+    .map((q) => q.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim())
+    .filter(Boolean)
+    .slice(0, quoteLimit);
+  if (quotes.length === 0) issue(ctx, [...path, 'quotes'], 'Need at least one quote.');
+
+  const fields: Omit<CharacterDraft, 'name'> = {
+    position: position ?? '',
+    role: role.slice(0, 2),
+    element: element ?? '',
+    appearance,
+    imageTags: subjectFirst.join(', '),
+    personality,
+    background,
+    quotes,
+  };
+  if (archetype) fields.archetype = archetype;
+  return fields;
+}
+
 export function characterListSchema(opts: CharacterSchemaOptions): ZodType<CharacterDraft[]> {
   const { catalog } = opts;
   return asSchema(
@@ -255,65 +315,35 @@ export function characterListSchema(opts: CharacterSchemaOptions): ZodType<Chara
         else if (taken.has(normTag(name))) issue(ctx, [...path, 'name'], `"${name}" is already used by another character; choose a different name.`);
         else taken.add(normTag(name));
 
-        const posRaw = looseStr(pick(c, 'position', 'range', 'positionTag'));
-        const position = matchPosition(posRaw, catalog);
-        if (!position) issue(ctx, [...path, 'position'], `Must be one of: ${catalog.position.join(', ')} (got "${posRaw}").`);
-
-        const roleRaw = looseList(pick(c, 'role', 'roles', 'class', 'classes'), /[,\n、，;；/]/);
-        const role: string[] = [];
-        const badRoles: string[] = [];
-        for (const r of roleRaw) {
-          const m = matchTag(r, catalog.role);
-          if (m) {
-            if (!role.includes(m)) role.push(m);
-          } else badRoles.push(r);
-        }
-        if (badRoles.length) issue(ctx, [...path, 'roles'], `Unknown role(s) ${badRoles.map((r) => `"${r}"`).join(', ')}. Use only: ${catalog.role.join(', ')}.`);
-        else if (role.length === 0) issue(ctx, [...path, 'roles'], `Pick 1–2 roles from: ${catalog.role.join(', ')}.`);
-
-        const elRaw = looseStr(pick(c, 'element', 'attribute', 'affinity', 'elements'));
-        const element = matchTag(elRaw, catalog.element);
-        if (!element) issue(ctx, [...path, 'element'], `Must be one of: ${catalog.element.join(', ')} (got "${elRaw}").`);
-
-        const archRaw = normTag(looseStr(pick(c, 'archetype', 'combatArchetype', 'combatRole')));
-        const archetype = ARCHETYPES.find((a) => a === archRaw || (archRaw.length >= 4 && (a.startsWith(archRaw) || archRaw.startsWith(a))));
-
-        const appearance = looseStr(pick(c, 'appearance', 'look', 'looks', 'visual', 'description'));
-        if (!appearance) issue(ctx, [...path, 'appearance'], 'Required.');
-
-        const tagParts = cleanTags(looseList(pick(c, 'imageTags', 'imagePrompt', 'danbooruTags', 'artTags', 'promptTags')));
-        if (tagParts.nonAscii.length) issue(ctx, [...path, 'imageTags'], `imageTags must be English tags only; replace: ${tagParts.nonAscii.join(', ')}`);
-        else if (tagParts.ascii.length < 5) issue(ctx, [...path, 'imageTags'], 'Need at least 5 English comma-separated tags (subject count, hair, eyes, build, outfit, accessories).');
-        else if (!tagParts.ascii.some((t) => SUBJECT_TAG.test(t))) issue(ctx, [...path, 'imageTags'], 'Start imageTags with a subject count tag: 1girl, 1boy or 1other.');
-        // 주제 태그를 맨 앞으로
-        const subjectFirst = [...tagParts.ascii.filter((t) => SUBJECT_TAG.test(t)), ...tagParts.ascii.filter((t) => !SUBJECT_TAG.test(t))];
-
-        const personality = looseStr(pick(c, 'personality', 'temperament', 'persona'));
-        if (!personality) issue(ctx, [...path, 'personality'], 'Required.');
-        const background = looseStr(pick(c, 'background', 'backstory', 'story', 'history', 'bio', 'biography'), '\n\n');
-        if (!background) issue(ctx, [...path, 'background'], 'Required.');
-
-        const quotes = looseList(pick(c, 'quotes', 'quote', 'lines', 'voiceLines', 'dialogue', 'sampleQuotes'), /\n+/)
-          .map((q) => q.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim())
-          .filter(Boolean)
-          .slice(0, QUOTE_LIMIT[opts.detail]);
-        if (quotes.length === 0) issue(ctx, [...path, 'quotes'], 'Need at least one quote.');
-
-        const draft: CharacterDraft = {
-          name,
-          position: position ?? '',
-          role: role.slice(0, 2),
-          element: element ?? '',
-          appearance,
-          imageTags: subjectFirst.join(', '),
-          personality,
-          background,
-          quotes,
-        };
-        if (archetype) draft.archetype = archetype;
-        out.push(draft);
+        out.push({ name, ...readCharacterFields(c, ctx, path, catalog, QUOTE_LIMIT[opts.detail]) });
       });
       return out;
+    }),
+  );
+}
+
+// ---------- 카드에서 가져온 캐릭터 정리 ----------
+
+export interface CardSheet extends Omit<CharacterDraft, 'name'> {
+  /** AI가 권하는 희귀도. 못 읽으면 없음 */
+  rarity?: Rarity;
+}
+
+export function cardSheetSchema(catalog: TagCatalog): ZodType<CardSheet> {
+  return asSchema(
+    z.unknown().transform((raw, ctx): CardSheet => {
+      const inner = isObj(raw) ? pick(raw, 'character', 'sheet', 'operator') : undefined;
+      const o: Obj | undefined = isObj(inner) ? inner : isObj(raw) ? raw : undefined;
+      if (!o) {
+        issue(ctx, [], 'Expected a JSON object with the character sheet.');
+        return z.NEVER;
+      }
+      const tagsObj = pick(o, 'tags');
+      const c: Obj = isObj(tagsObj) ? { ...o, ...tagsObj } : o;
+      const sheet: CardSheet = readCharacterFields(c, ctx, [], catalog, 5);
+      const r = looseInt(pick(c, 'rarity', 'suggestedRarity', 'stars', 'rank'));
+      if (r !== undefined && r >= 3 && r <= 6) sheet.rarity = r as Rarity;
+      return sheet;
     }),
   );
 }
