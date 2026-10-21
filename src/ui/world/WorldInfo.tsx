@@ -1,6 +1,6 @@
 // 준비된 월드의 정보, 자유 모드, 내보내기
 import { useState } from 'react';
-import { activateWorld, putSave, useBanners } from '../../game/store';
+import { activateWorld, putSave, useBanners, useChapters } from '../../game/store';
 import { exportBackup, exportWorldPack } from '../../pack';
 import { Toggle } from '../settings/fields';
 import { useSettings } from '../hooks';
@@ -124,12 +124,17 @@ function ExportSection({ world }: { world: World }) {
   const settings = useSettings();
   const [busy, setBusy] = useState<'pack' | 'backup'>();
   const [msg, setMsg] = useState<{ ok: boolean; text: string }>();
+  const chapters = useChapters(world.id);
+  const chapterCount = chapters?.length ?? 0;
+  // 사용자가 직접 고르기 전까지는 챕터가 있으면 켜 둔다
+  const [storyPick, setStoryPick] = useState<boolean>();
+  const includeStory = chapterCount > 0 && (storyPick ?? true);
 
   async function run(kind: 'pack' | 'backup') {
     setBusy(kind);
     setMsg(undefined);
     try {
-      const { blob, filename } = kind === 'pack' ? await exportWorldPack(world.id, { includeStory: false }) : await exportBackup(world.id);
+      const { blob, filename } = kind === 'pack' ? await exportWorldPack(world.id, { includeStory }) : await exportBackup(world.id);
       downloadBlob(blob, filename);
       setMsg({ ok: true, text: `${filename} (${formatSize(blob.size)})` });
     } catch (e) {
@@ -148,12 +153,26 @@ function ExportSection({ world }: { world: World }) {
         <div className="wi-export-item">
           <span className="wi-export-text">
             <strong>월드 팩</strong>
-            <small>친구에게 보낼 .zip. 세계관, 캐릭터, 배너, 그림만 들어가고 내 진행과 API 키는 들어가지 않습니다.</small>
+            <small>친구에게 보낼 .zip. 세계관, 캐릭터, 배너, 그림(+ 선택: 스토리)만 들어가고 내 진행과 API 키는 들어가지 않습니다.</small>
           </span>
           <label className="wi-check">
-            <input type="checkbox" disabled checked={false} readOnly />
+            <input
+              type="checkbox"
+              disabled={!chapterCount || !!busy}
+              checked={includeStory}
+              onChange={(e) => setStoryPick(e.target.checked)}
+            />
             <span>
-              스토리 포함 <small>스토리는 3단계부터</small>
+              스토리 포함{' '}
+              <small>
+                {chapters === undefined
+                  ? '…'
+                  : chapterCount
+                    ? includeStory
+                      ? `${chapterCount}개 챕터와 배경 그림이 들어갑니다`
+                      : `${chapterCount}개 챕터 (빼고 내보냄)`
+                    : '아직 스토리가 없습니다'}
+              </small>
             </span>
           </label>
           <button type="button" className="btn" disabled={!!busy} onClick={() => run('pack')}>
@@ -164,7 +183,7 @@ function ExportSection({ world }: { world: World }) {
           <span className="wi-export-text">
             <strong>백업</strong>
             <small>
-              월드 + 내 진행(세이브, 뽑기 기록). 기기를 옮기거나 지워질 때를 대비해. API 키는 들어가지 않습니다.
+              월드와 스토리 + 내 진행(세이브, 뽑기 기록, 읽은 위치). 기기를 옮기거나 지워질 때를 대비해. API 키는 들어가지 않습니다.
               {settings.lastBackupAt && <> 마지막 백업: {formatDate(settings.lastBackupAt)}</>}
             </small>
           </span>
