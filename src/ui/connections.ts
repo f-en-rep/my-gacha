@@ -1,6 +1,6 @@
 // 연결 프로필 관련 공용 값과 도우미
 import type { ConnectionProfile, ImageProfile, ImageProviderKind, TextProfile, TextProviderKind } from '../types';
-import { testTextConnection } from '../gen/text';
+import { summarizeServiceAccount, testTextConnection } from '../gen/text';
 import { testImageConnection } from '../gen/image';
 import { newId } from '../core/id';
 
@@ -9,6 +9,7 @@ export const TEXT_PROVIDERS: { value: TextProviderKind; label: string; modelHint
   { value: 'openai', label: 'OpenAI', modelHint: '예: gpt-4.1-mini' },
   { value: 'anthropic', label: 'Anthropic (Claude)', modelHint: '예: claude-sonnet-4-5' },
   { value: 'gemini', label: 'Google Gemini', modelHint: '예: gemini-2.5-flash' },
+  { value: 'vertex', label: 'Google Vertex AI', modelHint: '예: gemini-2.5-flash (목록 불러오기로 고를 수 있어요)' },
   { value: 'nanogpt', label: 'NanoGPT', modelHint: '예: deepseek-chat' },
   { value: 'openai-compatible', label: 'OpenAI 호환 (직접 주소)', modelHint: '서비스에서 쓰는 모델 이름' },
 ];
@@ -75,7 +76,13 @@ export function validateProfile(p: ConnectionProfile): string[] {
   if (p.type === 'text') {
     if (p.provider === 'openai-compatible') {
       if (!p.baseUrl?.trim()) errs.push('OpenAI 호환 서비스는 주소(Base URL)가 꼭 필요해요.');
+    } else if (p.provider === 'vertex' && p.vertex?.auth === 'serviceAccount') {
+      errs.push(...validateVertexServiceAccount(p));
     } else if (!p.apiKey.trim()) errs.push('API 키를 입력하세요.');
+    if (p.provider === 'vertex') {
+      const loc = p.vertex?.location?.trim();
+      if (loc && !/^[a-z0-9]+(-[a-z0-9]+)*$/i.test(loc)) errs.push('리전은 global 또는 us-central1 같은 형식이어야 해요.');
+    }
     if (p.baseUrl?.trim() && !/^https?:\/\//.test(p.baseUrl.trim())) errs.push('주소는 http:// 또는 https:// 로 시작해야 해요.');
     if (p.maxTokens !== undefined && (!Number.isFinite(p.maxTokens) || p.maxTokens < 1)) errs.push('최대 토큰은 1 이상이어야 해요.');
     if (p.temperature !== undefined && (p.temperature < 0 || p.temperature > 2)) errs.push('온도는 0~2 사이여야 해요.');
@@ -84,6 +91,14 @@ export function validateProfile(p: ConnectionProfile): string[] {
     if (!Number.isFinite(p.minIntervalMs) || p.minIntervalMs < MIN_INTERVAL_FLOOR) errs.push(`요청 간격은 최소 ${MIN_INTERVAL_FLOOR / 1000}초예요.`);
   }
   return errs;
+}
+
+function validateVertexServiceAccount(p: TextProfile): string[] {
+  if (!p.apiKey.trim()) return ['서비스 계정 JSON 키를 붙여 넣거나 파일로 열어 주세요.'];
+  const s = summarizeServiceAccount(p.apiKey);
+  if (!s.ok) return [s.error];
+  if (!s.projectId && !p.vertex?.projectId?.trim()) return ['JSON에 project_id가 없어요. 프로젝트 ID를 입력해 주세요.'];
+  return [];
 }
 
 export type TestState = 'ok' | 'fail' | 'pending';

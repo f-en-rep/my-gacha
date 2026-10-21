@@ -19,7 +19,18 @@ export const ALLOWED_HOSTS: ReadonlySet<string> = new Set([
   'api.openai.com',
   'api.anthropic.com',
   'generativelanguage.googleapis.com',
+  // Google Vertex AI (global 엔드포인트, express mode) 와 서비스 계정 토큰 발급
+  'aiplatform.googleapis.com',
+  'oauth2.googleapis.com',
 ]);
+
+/** Vertex AI 리전 엔드포인트 (예: us-central1-aiplatform.googleapis.com). 이 패턴 말고 와일드카드는 없다 */
+export const VERTEX_REGIONAL_HOST = /^[a-z0-9-]+-aiplatform\.googleapis\.com$/;
+
+export function isAllowedHost(hostname: string): boolean {
+  const h = hostname.toLowerCase();
+  return ALLOWED_HOSTS.has(h) || VERTEX_REGIONAL_HOST.test(h);
+}
 
 /** 요청에서 빼는 헤더 */
 const DROP_REQUEST_HEADERS = new Set([
@@ -79,7 +90,7 @@ export function parseAllowedTarget(raw: string | null): URL | null {
   if (url.protocol !== 'https:') return null;
   if (url.username || url.password) return null;
   if (url.port !== '' && url.port !== '443') return null;
-  if (!ALLOWED_HOSTS.has(url.hostname.toLowerCase())) return null;
+  if (!isAllowedHost(url.hostname)) return null;
   return url;
 }
 
