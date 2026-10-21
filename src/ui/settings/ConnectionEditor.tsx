@@ -95,6 +95,7 @@ function EditorForm({ initial, isNew }: { initial: ConnectionProfile; isNew: boo
   return (
     <form
       className="card editor"
+      noValidate
       onSubmit={(e) => {
         e.preventDefault();
         void save();

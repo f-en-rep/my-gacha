@@ -72,6 +72,8 @@ body {
 
 body {
   min-height: 100dvh;
+  word-break: keep-all;
+  overflow-wrap: break-word;
   overflow-x: hidden;
 }
 
@@ -288,12 +290,13 @@ textarea {
 
 .page-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   min-width: 0;
 }
 .page-header-text {
-  flex: 1;
+  flex: 1 1 200px;
   min-width: 0;
 }
 .page-header h1 {
@@ -310,7 +313,7 @@ textarea {
   flex-wrap: wrap;
 }
 @container main (min-width: 640px) {
-  .back-btn {
+  .page-header .back-btn {
     display: none;
   }
   .page-header h1 {
@@ -621,7 +624,8 @@ select:focus {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: var(--text);
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   transition: transform 0.18s;
 }
 .switch:checked {
@@ -629,7 +633,6 @@ select:focus {
 }
 .switch:checked::after {
   transform: translateX(20px);
-  background: var(--accent-ink);
 }
 
 .seg {
@@ -781,6 +784,7 @@ select:focus {
   .home-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas: 'currency start' 'worlds start';
+    align-items: start;
   }
   .home-currency {
     grid-area: currency;
@@ -802,6 +806,7 @@ select:focus {
   .home-grid {
     grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas: 'worlds currency start';
+    align-items: stretch;
   }
 }
 
@@ -881,7 +886,7 @@ select:focus {
 
 .world-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
   gap: 10px;
 }
 .world-slot {
@@ -919,9 +924,8 @@ select:focus {
     grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
     align-items: start;
   }
-  .characters-split,
   .split:has(.char-grid) {
-    grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
   }
   .detail-first-narrow {
     order: 0;
@@ -973,6 +977,9 @@ select:focus {
 @container main (min-width: 1080px) {
   .banner-stage {
     min-height: 380px;
+  }
+  .pull-preview {
+    grid-template-columns: repeat(10, minmax(0, 1fr));
   }
 }
 .pull-preview {
@@ -1028,7 +1035,7 @@ select:focus {
 
 .char-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
   gap: 12px;
 }
 @container main (min-width: 1080px) {
@@ -1060,26 +1067,19 @@ select:focus {
 }
 
 /* 폰: 편집은 새 화면처럼 */
-.settings .settings-detail {
-  display: none;
-}
-.settings.is-editing .settings-detail {
-  display: flex;
-}
 .settings.is-editing .settings-list,
 .settings.is-editing .settings-side,
 .settings.is-editing .settings-head {
   display: none;
 }
 
-/* 태블릿: 목록 + 상세 */
+/* 태블릿·PC: 목록(+작업별 연결·저장 공간) | 편집 */
 @container main (min-width: 640px) {
-  .settings.is-editing .settings-head,
   .settings.is-editing .settings-list,
   .settings.is-editing .settings-side {
     display: flex;
   }
-  .settings-head {
+  .settings.is-editing .settings-head {
     display: block;
   }
   .settings-grid {
@@ -1099,34 +1099,27 @@ select:focus {
   .settings-side {
     grid-area: side;
   }
-  .settings.is-editing .settings-detail {
-    position: sticky;
-    top: 24px;
+}
+
+/* PC: 편집 중이 아니면 옆 패널을 두 열로 */
+@container main (min-width: 1000px) {
+  .settings:not(.is-editing) .settings-grid {
+    grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+  }
+  .settings:not(.is-editing) .settings-side {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
   }
 }
 
-/* PC: 목록 | 상세 | 작업별 연결·저장 공간 */
-@container main (min-width: 1080px) {
-  .settings .settings-detail {
-    display: flex;
-  }
-  .settings-grid,
+/* 아주 넓은 화면: 목록 | 편집 | 옆 패널 */
+@container main (min-width: 1440px) {
   .settings.is-editing .settings-grid {
-    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr) minmax(300px, 360px);
+    grid-template-columns: minmax(300px, 360px) minmax(0, 1fr) minmax(320px, 380px);
     grid-template-areas: 'list detail side';
     grid-template-rows: auto;
   }
-  .settings.is-editing .settings-detail {
-    position: static;
-  }
-}
-
-.detail-placeholder {
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  min-height: 320px;
-  display: grid;
-  place-items: center;
 }
 
 .add-row {
