@@ -1731,7 +1731,7 @@ body.panel-open {
     display: grid;
     place-items: center;
     width: 44px;
-    height: 96px;
+    height: 80px;
     writing-mode: vertical-rl;
     background: var(--surface);
     border: 1px solid var(--ink);

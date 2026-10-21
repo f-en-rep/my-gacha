@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import type { AppSettings, Asset, Banner, Beat, Chapter, Character, ConnectionProfile, Location, PullRecord, Save, World } from '../types';
+import type { AppSettings, Asset, Banner, Beat, Chapter, ChatLine, Character, ConnectionProfile, Location, PullRecord, Save, World } from '../types';
 
 // 브라우저 저장소 (IndexedDB). 표 하나가 데이터 종류 하나.
 export class GachaDB extends Dexie {
@@ -14,6 +14,7 @@ export class GachaDB extends Dexie {
   chapters!: Table<Chapter, string>;
   beats!: Table<Beat, string>;
   locations!: Table<Location, string>;
+  chatLines!: Table<ChatLine, number>;
 
   constructor(name = 'my-gacha') {
     super(name);
@@ -35,6 +36,10 @@ export class GachaDB extends Dexie {
       chapters: 'id, worldId, [worldId+index]',
       beats: 'id, worldId, chapterId, [chapterId+index]',
       locations: 'id, worldId',
+    });
+    // 4: 1:1 대화
+    this.version(4).stores({
+      chatLines: '++id, saveId, [saveId+characterId]',
     });
   }
 }

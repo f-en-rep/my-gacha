@@ -1,4 +1,5 @@
 import type { Id, Rarity } from './world';
+import type { Bond } from './chat';
 
 /** 진행 쪽 데이터: 나만의 것. 월드 팩에는 절대 들어가지 않는다. */
 
@@ -71,6 +72,10 @@ export interface Save {
   lastDailyClaim?: string;
   /** 키: 챕터 id */
   story?: Record<Id, StoryProgress>;
+  /** 키: 캐릭터 id. 1:1 대화로 쌓는 호감도 */
+  bonds?: Record<Id, Bond>;
+  /** 대화에서 캐릭터가 부르는 플레이어 이름 (비우면 월드에 맞게 "당신") */
+  playerName?: string;
   createdAt: string;
   updatedAt: string;
 }

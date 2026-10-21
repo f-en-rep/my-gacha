@@ -9,6 +9,8 @@ export type Route =
   | { name: 'characters'; id?: string }
   | { name: 'world' }
   | { name: 'story'; chapterId?: string; read?: boolean }
+  | { name: 'chat'; characterId?: string }
+  | { name: 'shop' }
   | { name: 'settings'; sub?: SettingsSub };
 
 export type PanelName = Exclude<Route['name'], 'home'>;
@@ -21,6 +23,10 @@ export function parseHash(hash: string): Route {
       if (b === 'new') return { name: 'pull', banner: 'new' };
       if (b === 'edit' && c) return { name: 'pull', banner: { edit: c } };
       return { name: 'pull' };
+    case 'chat':
+      return b ? { name: 'chat', characterId: b } : { name: 'chat' };
+    case 'shop':
+      return { name: 'shop' };
     case 'story':
       if (b && c === 'read') return { name: 'story', chapterId: b, read: true };
       return b ? { name: 'story', chapterId: b } : { name: 'story' };
@@ -68,6 +74,8 @@ export const paths = {
   newBanner: '/pull/new',
   editBanner: (id: string) => `/pull/edit/${encodeURIComponent(id)}`,
   story: '/story',
+  chat: (id?: string) => (id ? `/chat/${encodeURIComponent(id)}` : '/chat'),
+  shop: '/shop',
   chapter: (id: string) => `/story/${encodeURIComponent(id)}`,
   read: (id: string) => `/story/${encodeURIComponent(id)}/read`,
   settings: '/settings',

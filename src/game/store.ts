@@ -5,7 +5,7 @@ import { ARKNIGHTS_RULES, type GachaRules } from '../core/gacha';
 import { newId, now } from '../core/id';
 import { randomSeed } from '../core/rng';
 import { useLiveQuery } from '../ui/hooks';
-import type { Banner, Beat, Chapter, Character, Id, Location, PullRecord, Save, StoryProgress, World } from '../types';
+import type { Banner, Beat, Chapter, ChatLine, Character, Id, Location, PullRecord, Save, StoryProgress, World } from '../types';
 
 /** 새 세이브에 넣어 주는 시작 재화 (10회분) */
 export const START_PULL_CURRENCY = 6000;
@@ -136,6 +136,14 @@ export async function clearChapter(saveId: Id, chapterId: Id): Promise<boolean> 
   });
 }
 
+/** 캐릭터 하나와의 대화. 오래된 것부터 */
+export function useChatLines(saveId: Id | undefined, characterId: Id | undefined): ChatLine[] | undefined {
+  return useLiveQuery(async () => {
+    if (!saveId || !characterId) return [];
+    return db.chatLines.where('[saveId+characterId]').equals([saveId, characterId]).sortBy('id');
+  }, [saveId, characterId]);
+}
+
 /** 저장된 그림(Asset)을 <img src>로 쓸 주소. 없거나 지워졌으면 undefined */
 export function useAssetUrl(assetId: Id | undefined): string | undefined {
   const blob = useLiveQuery(async () => (assetId ? (await db.assets.get(assetId))?.blob : undefined), [assetId]);
@@ -189,9 +197,12 @@ export function today(d = new Date()): string {
 
 /** 월드와 거기 딸린 모든 것(캐릭터, 배너, 그림, 세이브, 뽑기 기록) 지우기 */
 export async function deleteWorld(worldId: Id): Promise<void> {
-  await db.transaction('rw', [db.worlds, db.characters, db.banners, db.assets, db.saves, db.pulls, db.settings, db.chapters, db.beats, db.locations], async () => {
+  await db.transaction('rw', [db.worlds, db.characters, db.banners, db.assets, db.saves, db.pulls, db.settings, db.chapters, db.beats, db.locations, db.chatLines], async () => {
     const saves = await db.saves.where('worldId').equals(worldId).primaryKeys();
-    for (const sid of saves) await db.pulls.where('saveId').equals(sid).delete();
+    for (const sid of saves) {
+      await db.pulls.where('saveId').equals(sid).delete();
+      await db.chatLines.where('saveId').equals(sid).delete();
+    }
     await db.saves.bulkDelete(saves);
     await db.characters.where('worldId').equals(worldId).delete();
     await db.banners.where('worldId').equals(worldId).delete();
