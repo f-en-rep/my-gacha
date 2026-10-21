@@ -178,6 +178,8 @@ export function Reader({ chapter, world, save }: { chapter: Chapter; world: Worl
     if (phase !== 'reading' || !segments) return;
     if (pos.segment < segments.length - 1) setPos({ beat: pos.beat, segment: segments.length - 1 });
     else typed.finish();
+    // 버튼에 포커스가 남으면 다음 Enter가 또 "장면 넘기기"를 누른다: 읽기 화면으로 돌려 둔다
+    rootRef.current?.focus();
   };
 
   // 자동 넘기기
