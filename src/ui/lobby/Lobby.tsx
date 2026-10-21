@@ -2,14 +2,29 @@ import { Icon } from '../Icon';
 import { useProfiles, useSettings } from '../hooks';
 import { paths } from '../router';
 
+export interface SetupStep {
+  done: boolean;
+  label: string;
+  hint: string;
+  href: string;
+  /** 없어도 시작할 수 있는 단계 */
+  optional?: boolean;
+}
+
 /** 시작 준비 단계. 로비 대사와 월드 패널이 같이 쓴다 */
-export function useSetupSteps() {
+export function useSetupSteps(): SetupStep[] {
   const profiles = useProfiles() ?? [];
   const settings = useSettings();
   return [
     { done: profiles.some((p) => p.type === 'text'), label: '글 연결 추가', hint: 'OpenRouter, Claude, Gemini …', href: paths.connection('new-text') },
-    { done: profiles.some((p) => p.type === 'image'), label: '그림 연결 추가', hint: 'NovelAI, PixAI', href: paths.connection('new-image') },
     { done: !!settings.routing.structured, label: '작업별 연결 지정', hint: '어떤 일에 어떤 모델을 쓸지', href: paths.routing },
+    {
+      done: profiles.some((p) => p.type === 'image'),
+      label: '그림 연결 추가',
+      hint: 'NovelAI, PixAI · 나중에 해도 됩니다',
+      href: paths.connection('new-image'),
+      optional: true,
+    },
   ];
 }
 
@@ -24,8 +39,10 @@ function Figure() {
 
 export function Lobby({ panelOpen }: { panelOpen: boolean }) {
   const steps = useSetupSteps();
-  const next = steps.find((s) => !s.done);
-  const done = steps.filter((s) => s.done).length;
+  const required = steps.filter((s) => !s.optional);
+  const next = required.find((s) => !s.done);
+  const done = required.filter((s) => s.done).length;
+  const noImage = steps.some((s) => s.optional && !s.done);
 
   return (
     <div className="lobby" aria-hidden={panelOpen || undefined}>
@@ -66,11 +83,14 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
         <span className="dialog-name">{next ? '안내' : '준비 완료'}</span>
         {next ? (
           <p>
-            시작 전에 ({done}/{steps.length}) — {next.label}부터 해 주세요.{' '}
+            시작 전에 ({done}/{required.length}) — {next.label}부터 해 주세요.{' '}
             <a href={'#' + next.href}>바로 가기</a>
           </p>
         ) : (
-          <p>연결은 끝났습니다. 다음 업데이트에서 첫 월드를 만들 수 있어요.</p>
+          <p>
+            연결은 끝났습니다. 다음 업데이트에서 첫 월드를 만들 수 있어요.
+            {noImage && ' 그림 연결은 나중에 해도 됩니다. 그때까지 초상화는 빈 칸으로 나와요.'}
+          </p>
         )}
         <span className="dialog-cursor" aria-hidden="true">
           ▼

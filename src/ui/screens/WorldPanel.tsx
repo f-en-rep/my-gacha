@@ -11,7 +11,8 @@ const WORLD_MENU = [
 
 export function WorldPanel() {
   const steps = useSetupSteps();
-  const done = steps.filter((s) => s.done).length;
+  const required = steps.filter((s) => !s.optional);
+  const done = required.filter((s) => s.done).length;
 
   return (
     <Panel
@@ -48,7 +49,7 @@ export function WorldPanel() {
           <div className="page-section-head">
             <h2>시작 전에</h2>
             <span className="mono muted">
-              {done}/{steps.length}
+              {done}/{required.length}
             </span>
           </div>
           <ol className="checklist">
@@ -59,7 +60,10 @@ export function WorldPanel() {
                     {s.done ? '✓' : ''}
                   </span>
                   <span className="checklist-text">
-                    <strong>{s.label}</strong>
+                    <strong>
+                      {s.label}
+                      {s.optional && <span className="tag-optional">선택</span>}
+                    </strong>
                     <small>{s.hint}</small>
                   </span>
                   <Icon name="chevron" size={18} />

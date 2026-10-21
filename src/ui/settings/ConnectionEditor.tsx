@@ -66,6 +66,9 @@ function EditorForm({ initial, isNew }: { initial: ConnectionProfile; isNew: boo
     if (errs.length) return;
     const clean: ConnectionProfile = { ...draft, label: draft.label.trim(), model: draft.model.trim(), baseUrl: draft.baseUrl?.trim() || undefined };
     await db.profiles.put(clean);
+    // 작업별 연결이 비어 있으면 처음 저장한 연결로 채운다
+    const slot = clean.type === 'text' ? 'structured' : 'image';
+    await updateSettings((s) => (s.routing[slot] ? s : { ...s, routing: { ...s.routing, [slot]: clean.id } }));
     setSaved(clean);
     setDraft(clean);
     setNotice('저장됨');
