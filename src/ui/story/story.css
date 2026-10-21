@@ -40,7 +40,7 @@
 
 .st-write-btn {
   min-height: 52px;
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: var(--shadow-sm);
   font-size: 15px;
 }
 
@@ -55,7 +55,7 @@
   gap: 10px;
   padding: 14px;
   background: var(--surface);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
   border-left: 3px solid var(--accent);
 }
 
@@ -91,7 +91,7 @@
   width: 12px;
   height: 12px;
   background: var(--accent);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
   animation: st-spin 1.2s steps(4) infinite;
 }
 
@@ -110,7 +110,7 @@
 
 .st-detail-head {
   padding-bottom: 14px;
-  border-bottom: 1px solid var(--ink);
+  border-bottom: 1px solid var(--line);
 }
 
 .st-detail-head .kicker {
@@ -256,7 +256,7 @@
   justify-content: center;
   gap: 6px;
   padding: 0 24px 34vh;
-  background: repeating-linear-gradient(135deg, transparent 0 11px, rgba(23, 23, 26, 0.045) 11px 12px), var(--paper);
+  background: repeating-linear-gradient(135deg, transparent 0 11px, rgba(34, 40, 73, 0.045) 11px 12px), var(--paper);
   text-align: center;
 }
 
@@ -270,7 +270,7 @@
   font-size: clamp(22px, 4vw, 40px);
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: rgba(23, 23, 26, 0.18);
+  color: rgba(34, 40, 73, 0.18);
 }
 
 /* 위쪽 막대 */
@@ -282,7 +282,7 @@
   gap: 12px;
   padding: max(10px, env(safe-area-inset-top, 0px)) 16px 10px;
   background: rgba(251, 250, 246, 0.92);
-  border-bottom: 1px solid var(--ink);
+  border-bottom: 1px solid var(--line);
 }
 
 .st-top-title {
@@ -319,7 +319,7 @@
   min-height: 44px;
   padding: 0 12px;
   background: var(--surface);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
   border-radius: 0;
   color: var(--ink);
   font-size: 13px;
@@ -412,14 +412,14 @@
   height: auto;
   max-height: 52%;
   margin-bottom: 60px;
-  border: 1px solid var(--ink);
-  box-shadow: 3px 3px 0 var(--ink);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
 }
 
 .st-figure-sil {
   width: 70%;
   height: 80%;
-  fill: rgba(23, 23, 26, 0.18);
+  fill: rgba(34, 40, 73, 0.18);
 }
 
 .st-figure[data-state='dim'] {
@@ -447,9 +447,9 @@
   max-width: calc(100% - 32px);
   padding: 10px 14px;
   background: var(--surface);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
   border-left: 4px solid var(--accent);
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: var(--shadow-sm);
   pointer-events: none;
   animation: st-card-in 2.6s ease forwards;
 }
@@ -490,8 +490,8 @@
   margin: 0 auto;
   padding: 22px 18px 26px;
   background: var(--surface);
-  border: 1px solid var(--ink);
-  box-shadow: 4px 4px 0 var(--ink);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
 }
 
 .st-name {
@@ -520,9 +520,9 @@
 }
 
 .st-box.st-kind-narration {
-  background: #fbfaf6;
+  background: var(--surface);
   border-color: var(--ink-2);
-  box-shadow: 4px 4px 0 var(--ink-2);
+  box-shadow: var(--shadow);
 }
 
 .st-kind-thought .st-text {
@@ -561,8 +561,8 @@
   margin: auto 0;
   padding: 20px;
   background: var(--surface);
-  border: 1px solid var(--ink);
-  box-shadow: 5px 5px 0 var(--ink);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
   cursor: default;
   user-select: text;
   -webkit-user-select: text;
@@ -622,7 +622,7 @@
   margin-top: 14px;
   padding: 6px 12px;
   background: var(--accent-soft);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
   font-family: var(--mono);
   font-size: 16px;
   font-weight: 700;
@@ -632,7 +632,7 @@
   width: 10px;
   height: 10px;
   background: var(--accent);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
   transform: rotate(45deg);
 }
 
@@ -644,7 +644,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(23, 23, 26, 0.32);
+  background: rgba(34, 40, 73, 0.32);
   animation: fade 0.15s;
 }
 
@@ -654,8 +654,8 @@
   width: 100%;
   max-width: 760px;
   height: min(78dvh, 720px);
-  background: #fbfaf6;
-  border-top: 1px solid var(--ink);
+  background: var(--surface);
+  border-top: 1px solid var(--line);
   animation: sheet-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
   cursor: default;
   user-select: text;
@@ -667,7 +667,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--ink);
+  border-bottom: 1px solid var(--line);
 }
 
 .st-log-head > div {
@@ -846,7 +846,7 @@
     width: 480px;
     height: auto;
     border-top: 0;
-    border-left: 1px solid var(--ink);
+    border-left: 1px solid var(--line);
     animation: book-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 }

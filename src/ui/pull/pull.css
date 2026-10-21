@@ -33,7 +33,7 @@
   gap: 6px;
   height: 26px;
   padding: 0 8px;
-  border: 1px dashed var(--ink);
+  border: 1px dashed var(--line);
   font-family: var(--mono);
   font-size: 11px;
   font-weight: 600;
@@ -45,7 +45,7 @@
   width: 6px;
   height: 6px;
   background: var(--accent);
-  outline: 1px solid var(--ink);
+  outline: 1px solid var(--line);
 }
 .pl-free-top {
   align-self: flex-start;
@@ -85,7 +85,7 @@
   display: block;
   width: 78%;
   height: 86%;
-  fill: #d6d3c9;
+  fill: var(--rule);
 }
 .pl-stars {
   color: var(--ink);
@@ -136,7 +136,7 @@
 }
 .pl-banner-card[aria-pressed='true'] {
   border-color: var(--ink);
-  box-shadow: inset 4px 0 0 var(--accent), 3px 3px 0 var(--ink);
+  box-shadow: inset 4px 0 0 var(--accent), var(--shadow-sm);
 }
 .pl-banner-card[data-state='ended'] {
   opacity: 0.6;
@@ -270,7 +270,7 @@
 }
 .pl-detail-art {
   aspect-ratio: 21 / 8;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
 }
 .pl-detail-title .kicker {
   margin-bottom: 4px;
@@ -403,7 +403,7 @@
   gap: 6px;
   margin: 4px 0 0;
   padding: 10px;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
 }
 .pl-spark-pick legend {
   padding: 0 4px;
@@ -428,7 +428,7 @@
 .pl-spark-portrait {
   width: 36px;
   flex: none;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
 }
 .pl-spark-actions {
   display: flex;
@@ -446,8 +446,8 @@
   gap: 10px;
   margin: 0 -4px;
   padding: 12px 4px calc(var(--safe-b) + 12px);
-  border-top: 1px solid var(--ink);
-  background: #fbfaf6;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
 }
 .pl-wallet {
   display: flex;
@@ -475,7 +475,7 @@
   font-weight: 500;
 }
 .pl-actions .btn-accent {
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: var(--shadow-sm);
 }
 .pl-actions .btn:active:not(:disabled) {
   transform: translate(2px, 2px);
@@ -513,7 +513,7 @@
   z-index: 60;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  background: repeating-linear-gradient(135deg, transparent 0 11px, rgba(23, 23, 26, 0.035) 11px 12px), var(--paper);
+  background: repeating-linear-gradient(135deg, transparent 0 11px, rgba(34, 40, 73, 0.035) 11px 12px), var(--paper);
   color: var(--ink);
   animation: pl-fade 0.18s ease-out;
   overflow: hidden;
@@ -525,7 +525,7 @@
   align-items: center;
   gap: 10px;
   padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px;
-  border-bottom: 1px solid var(--ink);
+  border-bottom: 1px solid var(--line);
   background: var(--surface);
 }
 .pl-reveal-title {
@@ -672,8 +672,8 @@
   display: grid;
   place-items: center;
   transform: rotateY(180deg);
-  border: 1px solid var(--ink);
-  background: repeating-linear-gradient(45deg, transparent 0 5px, rgba(23, 23, 26, 0.08) 5px 6px), var(--surface);
+  border: 1px solid var(--line);
+  background: repeating-linear-gradient(45deg, transparent 0 5px, rgba(34, 40, 73, 0.08) 5px 6px), var(--surface);
   box-shadow: inset 0 -6px 0 var(--rule);
 }
 .pl-rcard-mark {
@@ -681,7 +681,7 @@
   place-items: center;
   width: 34%;
   aspect-ratio: 1;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
   background: var(--surface);
   font-size: 10px;
   font-weight: 700;
@@ -764,7 +764,7 @@
 .pl-rcard[data-rarity='6'] .pl-rcard-front {
   background: var(--accent);
   border: 2px solid var(--ink);
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: var(--shadow-sm);
 }
 .pl-rcard[data-rarity='6'] .pl-rcard-portrait {
   border-bottom: 2px solid var(--ink);
