@@ -18,5 +18,7 @@ export interface Banner {
   startsAt?: string;
   endsAt?: string;
   artId?: Id;
+  /** 배너 소개 한두 줄 (선택) */
+  description?: string;
   createdAt: string;
 }

@@ -5,12 +5,14 @@ import { ARKNIGHTS_RULES, type GachaRules } from '../core/gacha';
 import { newId, now } from '../core/id';
 import { randomSeed } from '../core/rng';
 import { useLiveQuery } from '../ui/hooks';
-import type { Banner, Character, Id, PullRecord, Save, World } from '../types';
+import type { Banner, Beat, Chapter, Character, Id, Location, PullRecord, Save, StoryProgress, World } from '../types';
 
 /** 새 세이브에 넣어 주는 시작 재화 (10회분) */
 export const START_PULL_CURRENCY = 6000;
 /** 매일 보상 (2회분) */
 export const DAILY_PULL_CURRENCY = 1200;
+/** 챕터를 처음 끝까지 읽었을 때 보상 (1회분) */
+export const STORY_CLEAR_REWARD = 600;
 
 export function newSave(worldId: Id, name = '기본'): Save {
   const t = now();
@@ -81,6 +83,59 @@ export function usePullHistory(saveId: Id | undefined, limit = 200): PullRecord[
   }, [saveId, limit]);
 }
 
+/** 월드의 챕터. 1장부터 */
+export function useChapters(worldId: Id | undefined): Chapter[] | undefined {
+  return useLiveQuery(async () => {
+    if (!worldId) return [];
+    return db.chapters.where('[worldId+index]').between([worldId, 0], [worldId, Infinity]).toArray();
+  }, [worldId]);
+}
+
+export function useChapter(chapterId: Id | undefined): Chapter | undefined {
+  return useLiveQuery(async () => (chapterId ? db.chapters.get(chapterId) : undefined), [chapterId]);
+}
+
+/** 챕터의 쓰인 장면들. 장면 순서대로 */
+export function useBeats(chapterId: Id | undefined): Beat[] | undefined {
+  return useLiveQuery(async () => {
+    if (!chapterId) return [];
+    return db.beats.where('[chapterId+index]').between([chapterId, 0], [chapterId, Infinity]).toArray();
+  }, [chapterId]);
+}
+
+export function useLocations(worldId: Id | undefined): Location[] | undefined {
+  return useLiveQuery(async () => (worldId ? db.locations.where('worldId').equals(worldId).toArray() : []), [worldId]);
+}
+
+/** 읽은 위치 저장 (같은 세이브를 다시 읽고 고친다) */
+export async function setStoryProgress(saveId: Id, chapterId: Id, beat: number, segment: number): Promise<void> {
+  await db.transaction('rw', db.saves, async () => {
+    const s = await db.saves.get(saveId);
+    if (!s) return;
+    const prev: StoryProgress | undefined = s.story?.[chapterId];
+    const next: StoryProgress = { ...prev, beat, segment };
+    await db.saves.put({ ...s, story: { ...s.story, [chapterId]: next }, updatedAt: now() });
+  });
+}
+
+/** 챕터를 끝까지 읽음. 처음이면 보상을 주고 true */
+export async function clearChapter(saveId: Id, chapterId: Id): Promise<boolean> {
+  return db.transaction('rw', db.saves, async () => {
+    const s = await db.saves.get(saveId);
+    if (!s) return false;
+    const prev = s.story?.[chapterId];
+    if (prev?.clearedAt) return false;
+    const next: StoryProgress = { beat: prev?.beat ?? 0, segment: prev?.segment ?? 0, clearedAt: now() };
+    await db.saves.put({
+      ...s,
+      wallet: { ...s.wallet, pull: s.wallet.pull + STORY_CLEAR_REWARD },
+      story: { ...s.story, [chapterId]: next },
+      updatedAt: now(),
+    });
+    return true;
+  });
+}
+
 /** 저장된 그림(Asset)을 <img src>로 쓸 주소. 없거나 지워졌으면 undefined */
 export function useAssetUrl(assetId: Id | undefined): string | undefined {
   const blob = useLiveQuery(async () => (assetId ? (await db.assets.get(assetId))?.blob : undefined), [assetId]);
@@ -134,12 +189,15 @@ export function today(d = new Date()): string {
 
 /** 월드와 거기 딸린 모든 것(캐릭터, 배너, 그림, 세이브, 뽑기 기록) 지우기 */
 export async function deleteWorld(worldId: Id): Promise<void> {
-  await db.transaction('rw', [db.worlds, db.characters, db.banners, db.assets, db.saves, db.pulls, db.settings], async () => {
+  await db.transaction('rw', [db.worlds, db.characters, db.banners, db.assets, db.saves, db.pulls, db.settings, db.chapters, db.beats, db.locations], async () => {
     const saves = await db.saves.where('worldId').equals(worldId).primaryKeys();
     for (const sid of saves) await db.pulls.where('saveId').equals(sid).delete();
     await db.saves.bulkDelete(saves);
     await db.characters.where('worldId').equals(worldId).delete();
     await db.banners.where('worldId').equals(worldId).delete();
+    await db.chapters.where('worldId').equals(worldId).delete();
+    await db.beats.where('worldId').equals(worldId).delete();
+    await db.locations.where('worldId').equals(worldId).delete();
     await db.assets.where('worldId').equals(worldId).delete();
     await db.worlds.delete(worldId);
     const s = await getSettings();

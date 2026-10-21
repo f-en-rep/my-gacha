@@ -37,6 +37,16 @@ export interface PullRecord {
   at: string;
 }
 
+/** 챕터 하나를 어디까지 읽었는지 */
+export interface StoryProgress {
+  /** 지금 읽는 장면 (nodes 인덱스) */
+  beat: number;
+  /** 그 장면 안의 토막 인덱스 (이어 읽기) */
+  segment: number;
+  /** 끝까지 읽은 시각. 처음 다 읽을 때 보상을 준다 */
+  clearedAt?: string;
+}
+
 export interface Wallet {
   pull: number;
   shop: number;
@@ -59,6 +69,8 @@ export interface Save {
   featuredCharacterId?: Id;
   /** 마지막으로 매일 보상을 받은 날 (YYYY-MM-DD, 기기 시간대) */
   lastDailyClaim?: string;
+  /** 키: 챕터 id */
+  story?: Record<Id, StoryProgress>;
   createdAt: string;
   updatedAt: string;
 }
