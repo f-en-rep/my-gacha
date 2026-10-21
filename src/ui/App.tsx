@@ -1,76 +1,44 @@
 import { useEffect } from 'react';
-import { Icon, type IconName } from './Icon';
-import { paths, tabOf, useRoute, type Route, type TabName } from './router';
+import { useRoute, type Route } from './router';
 import { requestPersistentStorage } from '../db';
-import { HomeScreen } from './screens/HomeScreen';
-import { PullScreen } from './screens/PullScreen';
-import { CharactersScreen } from './screens/CharactersScreen';
-import { SettingsScreen } from './settings/SettingsScreen';
-import { DiagnosticsScreen } from './settings/DiagnosticsScreen';
+import { Lobby } from './lobby/Lobby';
+import { PullPanel } from './screens/PullScreen';
+import { CharactersPanel } from './screens/CharactersScreen';
+import { WorldPanel } from './screens/WorldPanel';
+import { SettingsPanel } from './settings/SettingsPanel';
 
-const TABS: { name: TabName; label: string; icon: IconName; path: string }[] = [
-  { name: 'home', label: '홈', icon: 'home', path: paths.home },
-  { name: 'pull', label: '뽑기', icon: 'pull', path: paths.pull },
-  { name: 'characters', label: '캐릭터', icon: 'cards', path: paths.characters },
-  { name: 'settings', label: '설정', icon: 'gear', path: paths.settings },
-];
-
-function Screen({ route }: { route: Route }) {
+function PanelFor({ route }: { route: Route }) {
   switch (route.name) {
     case 'home':
-      return <HomeScreen />;
+      return null;
     case 'pull':
-      return <PullScreen />;
+      return <PullPanel />;
     case 'characters':
-      return <CharactersScreen />;
+      return <CharactersPanel />;
+    case 'world':
+      return <WorldPanel />;
     case 'settings':
-      return <SettingsScreen />;
-    case 'connection':
-      return <SettingsScreen editId={route.id} />;
-    case 'diagnostics':
-      return <DiagnosticsScreen />;
+      return <SettingsPanel sub={route.sub} />;
   }
 }
 
 export function App() {
   const route = useRoute();
-  const tab = tabOf(route);
+  const open = route.name !== 'home';
 
   useEffect(() => {
     void requestPersistentStorage();
   }, []);
 
-  // 화면이 바뀌면 맨 위로
+  // 패널이 열려 있으면 뒤의 로비가 스크롤되지 않게
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [route.name]);
+    document.body.classList.toggle('panel-open', open);
+  }, [open]);
 
   return (
-    <div className="app">
-      <nav className="nav" aria-label="주 메뉴">
-        <a className="nav-brand" href={'#' + paths.home}>
-          <span className="brand-mark" aria-hidden="true" />
-          <span className="brand-name">my-gacha</span>
-        </a>
-        <div className="nav-items">
-          {TABS.map((t) => (
-            <a key={t.name} className="nav-item" href={'#' + t.path} aria-current={tab === t.name ? 'page' : undefined}>
-              <Icon name={t.icon} />
-              <span>{t.label}</span>
-            </a>
-          ))}
-        </div>
-        <div className="nav-foot">
-          <a className="nav-item nav-sub" href={'#' + paths.diagnostics} aria-current={route.name === 'diagnostics' ? 'page' : undefined}>
-            <Icon name="pulse" />
-            <span>연결 진단</span>
-          </a>
-          <p className="nav-note">v0.0.1</p>
-        </div>
-      </nav>
-      <main className="main" key={route.name === 'connection' ? 'settings' : route.name}>
-        <Screen route={route} />
-      </main>
+    <div className="app" data-panel={open ? route.name : undefined}>
+      <Lobby panelOpen={open} />
+      <PanelFor route={route} />
     </div>
   );
 }

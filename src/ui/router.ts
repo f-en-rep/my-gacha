@@ -1,15 +1,16 @@
-// 아주 작은 해시 라우터: #/home, #/settings/connections/:id ...
+// 아주 작은 해시 라우터. 로비는 늘 깔려 있고, 경로는 그 위에 열 패널을 정한다.
 import { useSyncExternalStore } from 'react';
+
+export type SettingsSub = { kind: 'connection'; id: string } | { kind: 'routing' } | { kind: 'storage' } | { kind: 'diagnostics' };
 
 export type Route =
   | { name: 'home' }
   | { name: 'pull' }
   | { name: 'characters' }
-  | { name: 'settings' }
-  | { name: 'connection'; id: string }
-  | { name: 'diagnostics' };
+  | { name: 'world' }
+  | { name: 'settings'; sub?: SettingsSub };
 
-export type TabName = 'home' | 'pull' | 'characters' | 'settings';
+export type PanelName = Exclude<Route['name'], 'home'>;
 
 export function parseHash(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
@@ -19,20 +20,17 @@ export function parseHash(hash: string): Route {
       return { name: 'pull' };
     case 'characters':
       return { name: 'characters' };
+    case 'world':
+      return { name: 'world' };
     case 'diagnostics':
-      return { name: 'diagnostics' };
+      return { name: 'settings', sub: { kind: 'diagnostics' } };
     case 'settings':
-      if (b === 'connections' && c) return { name: 'connection', id: c };
+      if (b === 'connections' && c) return { name: 'settings', sub: { kind: 'connection', id: c } };
+      if (b === 'routing' || b === 'storage' || b === 'diagnostics') return { name: 'settings', sub: { kind: b } };
       return { name: 'settings' };
     default:
       return { name: 'home' };
   }
-}
-
-/** 지금 화면이 어느 탭에 속하는지 */
-export function tabOf(route: Route): TabName {
-  if (route.name === 'connection' || route.name === 'diagnostics') return 'settings';
-  return route.name;
 }
 
 export function navigate(path: string, opts: { replace?: boolean } = {}): void {
@@ -59,7 +57,10 @@ export const paths = {
   home: '/home',
   pull: '/pull',
   characters: '/characters',
+  world: '/world',
   settings: '/settings',
-  diagnostics: '/diagnostics',
+  routing: '/settings/routing',
+  storage: '/settings/storage',
+  diagnostics: '/settings/diagnostics',
   connection: (id: string) => `/settings/connections/${encodeURIComponent(id)}`,
 };

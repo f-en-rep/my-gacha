@@ -42,7 +42,7 @@ export function ConnectionEditor({ id }: { id: string }) {
   if (load.status === 'missing')
     return (
       <div className="card">
-        <PageHeader title="연결을 찾을 수 없어요" back={paths.settings} />
+        <PageHeader title="연결을 찾을 수 없어요" />
         <p className="muted">삭제되었거나 다른 기기의 주소일 수 있어요.</p>
       </div>
     );
@@ -101,7 +101,7 @@ function EditorForm({ initial, isNew }: { initial: ConnectionProfile; isNew: boo
         void save();
       }}
     >
-      <PageHeader title={title} kicker={draft.type === 'text' ? 'TEXT CONNECTION' : 'IMAGE CONNECTION'} back={paths.settings} />
+      <PageHeader title={title} kicker={draft.type === 'text' ? 'TEXT CONNECTION' : 'IMAGE CONNECTION'} />
 
       <div className="form-grid">
         {draft.type === 'text' ? <TextFields p={draft} set={set} /> : <ImageFields p={draft} set={set} />}

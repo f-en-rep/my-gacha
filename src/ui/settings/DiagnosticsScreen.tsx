@@ -45,11 +45,10 @@ export function DiagnosticsScreen() {
   }
 
   return (
-    <div className="page diagnostics">
+    <div className="stack diagnostics">
       <PageHeader
         kicker="DIAGNOSTICS"
         title="연결 진단"
-        back={paths.settings}
         actions={
           profiles && profiles.length > 0 ? (
             <button className="btn btn-primary" onClick={() => void runAll()} disabled={busy}>
