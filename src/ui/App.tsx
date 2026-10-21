@@ -7,6 +7,8 @@ import { CharactersPanel } from './screens/CharactersScreen';
 import { WorldPanel } from './screens/WorldPanel';
 import { SettingsPanel } from './settings/SettingsPanel';
 import { StoryPanel } from './story/StoryPanel';
+import { ChatPanel } from './chat/ChatPanel';
+import { ShopPanel } from './shop/ShopPanel';
 
 function PanelFor({ route }: { route: Route }) {
   switch (route.name) {
@@ -18,6 +20,10 @@ function PanelFor({ route }: { route: Route }) {
       return <CharactersPanel id={route.id} />;
     case 'world':
       return <WorldPanel />;
+    case 'chat':
+      return <ChatPanel characterId={route.characterId} />;
+    case 'shop':
+      return <ShopPanel />;
     case 'story':
       return <StoryPanel chapterId={route.chapterId} read={route.read} />;
     case 'settings':

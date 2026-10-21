@@ -6,6 +6,8 @@ const TABS: { name: PanelName; label: string; path: string }[] = [
   { name: 'pull', label: '뽑기', path: paths.pull },
   { name: 'characters', label: '캐릭터', path: paths.characters },
   { name: 'story', label: '스토리', path: paths.story },
+  { name: 'chat', label: '대화', path: paths.chat() },
+  { name: 'shop', label: '상점', path: paths.shop },
   { name: 'world', label: '월드', path: paths.world },
   { name: 'settings', label: '설정', path: paths.settings },
 ];

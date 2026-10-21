@@ -123,6 +123,16 @@ export const saveSchema = z.object({
       }),
     )
     .optional(),
+  bonds: z
+    .record(
+      z.object({
+        points: z.number().nonnegative(),
+        claimed: z.array(z.number().int()).max(1000),
+        today: z.object({ day: z.string().max(20), points: z.number().nonnegative() }).optional(),
+      }),
+    )
+    .optional(),
+  playerName: text(200).optional(),
   createdAt: iso,
   updatedAt: iso,
 });
@@ -138,6 +148,18 @@ export const pullRecordSchema = z.object({
 });
 
 export const pullsFileSchema = z.array(pullRecordSchema).max(1_000_000);
+
+// ── 1:1 대화 (백업만) ──
+
+export const chatLineSchema = z.object({
+  saveId: id,
+  characterId: id,
+  role: z.enum(['user', 'char']),
+  text: text(),
+  at: iso,
+});
+
+export const chatsFileSchema = z.array(chatLineSchema).max(1_000_000);
 
 // ── 스토리 (story/ 아래, 선택) ──
 
