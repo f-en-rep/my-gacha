@@ -16,10 +16,11 @@
 
 import { unzipSync } from 'fflate';
 import { apiFetch, ensureOk } from '../../net/http';
-import type { ImageProfile } from '../../types';
+import type { ImageGenSettings, ImageProfile } from '../../types';
 import type { ConnectionTestResult } from '../text';
 import { isPng, readPngSize, resolveSeed, toImageError } from './common';
-import type { ImageRequest, ImageResult } from './types';
+import type { CharacterPrompt, ImageRequest, ImageResult } from './types';
+import { mergeCharacterPrompts } from './common';
 
 export const NOVELAI_IMAGE_BASE = 'https://image.novelai.net';
 export const NOVELAI_API_BASE = 'https://api.novelai.net';
@@ -40,26 +41,40 @@ export interface NovelAIBodyInput {
   width: number;
   height: number;
   seed: number;
+  /** V4 이상: 캐릭터 슬롯. V3: 프롬프트 뒤에 이어 붙인다 */
+  characters?: CharacterPrompt[];
+  /** 프로필의 생성 설정 (steps, scale, sampler …) */
+  gen?: ImageGenSettings;
   /** profile.extra. parameters에 덮어쓴다. 단 extra.varietyBoost: true면 Variety+ 계산 */
   extra?: Record<string, unknown>;
 }
 
+/** 캐릭터 슬롯 하나는 화면 가운데에 둔다 (여러 명이면 가로로 나눈다) */
+function slotCenter(i: number, n: number): { x: number; y: number } {
+  return { x: Math.round(((i + 1) / (n + 1)) * 10) / 10, y: 0.5 };
+}
+
 /** 요청 본문 만들기 (테스트하기 쉽게 따로 뺌) */
 export function buildNovelAIBody(i: NovelAIBodyInput): Record<string, unknown> {
-  const { varietyBoost, ...extra } = i.extra ?? {};
+  const { varietyBoost: extraVariety, ...extra } = i.extra ?? {};
   const v4 = isNovelAIV4Model(i.model);
+  const gen = i.gen ?? {};
+  const varietyBoost = extraVariety ?? gen.varietyBoost;
+  const chars = (i.characters ?? []).filter((c) => c.prompt.trim());
+  // V3에는 캐릭터 슬롯이 없다: 공통 프롬프트에 이어 붙인다
+  const flat = v4 ? { prompt: i.prompt, negativePrompt: i.negativePrompt } : mergeCharacterPrompts(i.prompt, i.negativePrompt, chars);
 
   const parameters: Record<string, unknown> = {
     params_version: 3,
     width: i.width,
     height: i.height,
-    scale: 5,
-    sampler: 'k_euler_ancestral',
-    steps: 28,
+    scale: gen.scale ?? 5,
+    sampler: gen.sampler || 'k_euler_ancestral',
+    steps: gen.steps ?? 28,
     n_samples: 1,
     seed: i.seed,
-    negative_prompt: i.negativePrompt,
-    noise_schedule: 'karras',
+    negative_prompt: flat.negativePrompt,
+    noise_schedule: gen.noiseSchedule || 'karras',
     ucPreset: 0,
     qualityToggle: false,
     sm: false,
@@ -69,7 +84,7 @@ export function buildNovelAIBody(i: NovelAIBodyInput): Record<string, unknown> {
     legacy: false,
     add_original_image: false,
     uncond_scale: 1,
-    cfg_rescale: 0,
+    cfg_rescale: gen.cfgRescale ?? 0,
     prefer_brownian: true,
     deliberate_euler_ancestral_bug: false,
     legacy_v3_extend: false,
@@ -82,19 +97,26 @@ export function buildNovelAIBody(i: NovelAIBodyInput): Record<string, unknown> {
   }
 
   if (v4) {
+    const centers = chars.map((_, k) => slotCenter(k, chars.length));
     Object.assign(parameters, {
       use_coords: false,
-      characterPrompts: [],
+      characterPrompts: chars.map((c, k) => ({ prompt: c.prompt, uc: c.negative ?? '', center: centers[k], enabled: true })),
       reference_image_multiple: [],
       reference_information_extracted_multiple: [],
       reference_strength_multiple: [],
       v4_prompt: {
-        caption: { base_caption: i.prompt, char_captions: [] },
+        caption: {
+          base_caption: i.prompt,
+          char_captions: chars.map((c, k) => ({ char_caption: c.prompt, centers: [centers[k]] })),
+        },
         use_coords: false,
         use_order: true,
       },
       v4_negative_prompt: {
-        caption: { base_caption: i.negativePrompt, char_captions: [] },
+        caption: {
+          base_caption: i.negativePrompt,
+          char_captions: chars.map((c, k) => ({ char_caption: c.negative ?? '', centers: [centers[k]] })),
+        },
       },
     });
   }
@@ -106,7 +128,7 @@ export function buildNovelAIBody(i: NovelAIBodyInput): Record<string, unknown> {
     parameters.sm_dyn = false;
   }
 
-  return { action: 'generate', input: i.prompt, model: i.model, parameters };
+  return { action: 'generate', input: flat.prompt, model: i.model, parameters };
 }
 
 /** NovelAI 응답(보통 ZIP)에서 PNG를 꺼낸다. 이미 PNG면 그대로 */
@@ -126,10 +148,20 @@ export async function generateNovelAI(profile: ImageProfile, req: ImageRequest):
   const model = profile.model || NOVELAI_DEFAULT_MODEL;
   const width = req.width ?? profile.width;
   const height = req.height ?? profile.height;
-  const seed = resolveSeed(req.seed);
+  const seed = resolveSeed(req.seed ?? profile.gen?.seed);
   const negativePrompt = req.negativePrompt ?? '';
   const base = (profile.baseUrl || NOVELAI_IMAGE_BASE).replace(/\/+$/, '');
-  const body = buildNovelAIBody({ model, prompt: req.prompt, negativePrompt, width, height, seed, extra: profile.extra });
+  const body = buildNovelAIBody({
+    model,
+    prompt: req.prompt,
+    negativePrompt,
+    width,
+    height,
+    seed,
+    characters: req.characters,
+    gen: profile.gen,
+    extra: profile.extra,
+  });
 
   try {
     const res = await apiFetch(

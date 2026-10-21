@@ -19,6 +19,7 @@ import {
   type TestOutcome,
 } from '../connections';
 import { Field, NumberInput, SecretInput, Toggle } from './fields';
+import { ImageGenFields } from './ImageGenFields';
 import { VertexFields } from './VertexFields';
 
 type Load = { status: 'loading' } | { status: 'missing' } | { status: 'ready'; profile: ConnectionProfile; isNew: boolean };
@@ -313,6 +314,7 @@ function ImageFields({ p, set }: { p: ImageProfile; set: (patch: Partial<ImagePr
           />
         )}
       </Field>
+      <ImageGenFields p={p} set={set} />
     </>
   );
 }

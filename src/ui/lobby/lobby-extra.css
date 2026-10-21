@@ -66,8 +66,20 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center top;
+  /* 틀과 비율이 달라도 그림을 자르지 않는다 (남는 곳은 빈칸) */
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+/* 대사 찍는 중 커서 */
+.type-caret {
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.12em;
+  background: var(--ink);
+  animation: blink 0.8s steps(2) infinite;
 }
 
 .stage-art.has-portrait .stage-caption {

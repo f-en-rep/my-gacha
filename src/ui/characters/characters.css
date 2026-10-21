@@ -418,4 +418,50 @@
 .card-art {
   object-fit: cover !important;
   object-position: center !important;
+  /* 카드 그림 자체의 둥근 모서리 바깥(어두운 바탕)을 가린다 */
+  border-radius: 3.5% / 2.4%;
+}
+
+/* 그림 프롬프트 슬롯 */
+.cd-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cd-prompt-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cd-prompt-preview summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cd-prompt-preview dl {
+  margin: 10px 0 0;
+  display: grid;
+  gap: 4px;
+}
+
+.cd-prompt-preview dt {
+  margin-top: 6px;
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.cd-prompt-preview dd {
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-word;
 }

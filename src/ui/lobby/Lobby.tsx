@@ -8,6 +8,7 @@ import { now } from '../../core/id';
 import { Portrait } from '../characters/Portrait';
 import { CARD_BACK_COMMON } from '../cards';
 import type { Character, Id, Save } from '../../types';
+import { useTypewriter } from './typewriter';
 import './lobby-extra.css';
 
 /** 매일 보상 받기. 같은 날 두 번 받지 않게 저장된 세이브를 다시 읽고 고친다 */
@@ -52,7 +53,11 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
   const quotes = featured?.quotes.filter((q) => q.trim()) ?? [];
   const quoteIndex = quote.id === featured?.id ? quote.i % Math.max(1, quotes.length) : 0;
   const speaking = !next && !!ready && !!featured;
-  const nextQuote = () => setQuote({ id: featured?.id, i: quoteIndex + 1 });
+  const line = speaking ? (quotes.length ? quotes[quoteIndex]! : '……') : '';
+  // 패널이 열려 있는 동안은 찍지 않다가, 로비로 돌아오면 그때 찍는다
+  const typed = useTypewriter(panelOpen ? '' : line);
+  // 찍는 중이면 먼저 끝까지 보여 주고, 다 보였으면 다음 대사
+  const nextQuote = () => (typed.typing ? typed.finish() : setQuote({ id: featured?.id, i: quoteIndex + 1 }));
 
   const [claiming, setClaiming] = useState(false);
   const canClaim = !!ready && !!save && save.lastDailyClaim !== today();
@@ -101,7 +106,12 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
     );
   } else {
     dialogName = featured.name;
-    dialogBody = <p className="dialog-quote">{quotes.length ? quotes[quoteIndex] : '……'}</p>;
+    dialogBody = (
+      <p className="dialog-quote" aria-label={line}>
+        <span aria-hidden="true">{typed.shown}</span>
+        {typed.typing && <span className="type-caret" aria-hidden="true" />}
+      </p>
+    );
   }
 
   return (
@@ -152,17 +162,17 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
       </div>
 
       <div
-        className={'lobby-dialog' + (speaking && quotes.length > 1 ? ' is-cycling' : '')}
+        className={'lobby-dialog' + (speaking && (quotes.length > 1 || typed.typing) ? ' is-cycling' : '')}
         role="status"
-        onClick={speaking && quotes.length > 1 ? nextQuote : undefined}
+        onClick={speaking && (quotes.length > 1 || typed.typing) ? nextQuote : undefined}
       >
         <span className="dialog-name">{dialogName}</span>
         {dialogBody}
-        {speaking && quotes.length > 1 ? (
+        {speaking && (quotes.length > 1 || typed.typing) ? (
           <button
             type="button"
             className="dialog-cursor dialog-next"
-            aria-label="다음 대사"
+            aria-label={typed.typing ? '대사 바로 보기' : '다음 대사'}
             onClick={(e) => {
               e.stopPropagation();
               nextQuote();
