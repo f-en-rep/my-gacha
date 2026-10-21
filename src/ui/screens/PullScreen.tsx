@@ -209,20 +209,20 @@ export function PullPanel({ banner: editing }: { banner?: 'new' | { edit: Id } }
             ) : null
           ) : (
             <div className="pl-right">
-            {banner && cast ? (
-              <BannerDetail
-                world={world}
-                save={shownSave}
-                banner={banner}
-                cast={cast}
-                rules={rules}
-                busy={busy || !!reveal}
-                message={message}
-                onPull={(n) => void onPull(n)}
-                onSpark={(id) => void onSpark(id)}
-              />
-            ) : null}
-            <PullHistory {...historyProps} className="pl-history-narrow" idSuffix="narrow" />
+              {banner && cast ? (
+                <BannerDetail
+                  world={world}
+                  save={shownSave}
+                  banner={banner}
+                  cast={cast}
+                  rules={rules}
+                  busy={busy || !!reveal}
+                  message={message}
+                  onPull={(n) => void onPull(n)}
+                  onSpark={(id) => void onSpark(id)}
+                />
+              ) : null}
+              <PullHistory {...historyProps} className="pl-history-narrow" idSuffix="narrow" />
             </div>
           )
         }

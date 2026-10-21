@@ -25,9 +25,6 @@
   border-style: dashed;
   border-color: var(--ink-3);
 }
-.pl-new-banner[aria-current='true'] {
-  border-style: solid;
-}
 
 /* 편집 화면 */
 .be {
@@ -263,7 +260,8 @@ ul.form-errors {
   flex-direction: column;
   gap: 2px;
 }
-.pl-new-banner[aria-current='true'] {
+.btn.pl-new-banner[aria-current='true'],
+.btn.pl-new-banner[aria-current='true']:hover {
   border: 1px solid var(--ink);
   background: var(--accent-soft);
   color: var(--ink);
