@@ -52,37 +52,37 @@ export function RoutingPanel() {
     });
 
   return (
-    <Section title="작업별 연결" icon="route">
+    <Section title="작업별 연결">
       <div className="stack">
         <RouteSelect
           label="구조화 작업"
-          hint="캐릭터 시트·계획처럼 JSON이 필요한 일. 똑똑한 모델 추천."
+          hint="캐릭터 시트, 챕터 계획"
           value={settings.routing.structured}
           options={text}
-          emptyLabel={text.length ? '선택하세요' : '글 연결을 먼저 추가하세요'}
+          emptyLabel={text.length ? '선택 안 함' : '글 연결 없음'}
           onChange={(v) => void setRoute('structured', v)}
         />
         <RouteSelect
           label="문장 작업"
-          hint="스토리 대사 등. 더 싼 모델로 따로 정할 수 있어요."
+          hint="스토리 대사. 싼 모델을 따로 써도 됩니다"
           value={settings.routing.prose}
           options={text}
-          emptyLabel="구조화 작업과 같은 연결"
+          emptyLabel="구조화 작업과 같게"
           onChange={(v) => void setRoute('prose', v)}
         />
         <RouteSelect
           label="그림"
-          hint="초상화 생성에 쓸 NovelAI / PixAI 연결."
+          hint="초상화, 배경"
           value={settings.routing.image}
           options={image}
-          emptyLabel={image.length ? '선택하세요' : '그림 연결을 먼저 추가하세요'}
+          emptyLabel={image.length ? '선택 안 함' : '그림 연결 없음'}
           onChange={(v) => void setRoute('image', v)}
         />
         <Toggle
           checked={settings.autoPaintLowRarity}
           onChange={(v) => void updateSettings((s) => ({ ...s, autoPaintLowRarity: v }))}
-          label="3★·4★ 초상화도 자동으로 그리기"
-          hint="끄면 낮은 등급은 '그리기' 버튼을 눌렀을 때만 그려요 (비용 절약)."
+          label="3★·4★ 초상화 자동 생성"
+          hint="끄면 직접 눌러야 그립니다"
         />
       </div>
     </Section>

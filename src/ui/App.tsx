@@ -49,7 +49,7 @@ export function App() {
     <div className="app">
       <nav className="nav" aria-label="주 메뉴">
         <a className="nav-brand" href={'#' + paths.home}>
-          <span className="brand-mark" aria-hidden="true">✦</span>
+          <span className="brand-mark" aria-hidden="true" />
           <span className="brand-name">my-gacha</span>
         </a>
         <div className="nav-items">
@@ -65,7 +65,7 @@ export function App() {
             <Icon name="pulse" />
             <span>연결 진단</span>
           </a>
-          <p className="nav-note">0단계 · 연결 준비</p>
+          <p className="nav-note">v0.0.1</p>
         </div>
       </nav>
       <main className="main" key={route.name === 'connection' ? 'settings' : route.name}>

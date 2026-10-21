@@ -14,8 +14,8 @@ export function SettingsScreen({ editId }: { editId?: string }) {
     <div className={`page settings ${editing ? 'is-editing' : ''}`}>
       <div className="settings-head">
         <PageHeader
+          kicker="SETTINGS"
           title="설정"
-          subtitle="연결, 작업별 연결, 저장 공간"
           actions={
             <a className="btn btn-ghost" href={'#' + paths.diagnostics}>
               연결 진단

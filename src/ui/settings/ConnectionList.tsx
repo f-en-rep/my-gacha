@@ -31,10 +31,8 @@ export function ConnectionList({ selectedId }: { selectedId?: string }) {
   const image = profiles?.filter((p) => p.type === 'image') ?? [];
 
   return (
-    <Section title="연결" icon="pulse">
-      <p className="muted small">
-        AI 서비스 주소와 API 키 묶음이에요. API 키는 <strong>이 브라우저에만</strong> 저장되고, 월드 팩·백업으로 절대 내보내지 않아요.
-      </p>
+    <Section title="연결">
+      <p className="muted small">키는 이 브라우저에만 저장됩니다.</p>
       <div className="add-row">
         <a className="btn" href={'#' + paths.connection('new-text')} aria-current={selectedId === 'new-text' ? 'true' : undefined}>
           <Icon name="plus" size={18} /> 글 연결
@@ -46,12 +44,12 @@ export function ConnectionList({ selectedId }: { selectedId?: string }) {
       {profiles === undefined ? (
         <p className="muted">불러오는 중…</p>
       ) : profiles.length === 0 ? (
-        <p className="muted small list-empty">아직 연결이 없어요. 위 버튼으로 추가하세요.</p>
+        <p className="small list-empty">연결이 없습니다.</p>
       ) : (
         <>
           {text.length > 0 && (
             <>
-              <h3 className="list-label">글 생성</h3>
+              <h3 className="list-label">TEXT</h3>
               <ul className="conn-list">
                 {text.map((p) => (
                   <Row key={p.id} p={p} selected={p.id === selectedId} />
@@ -61,7 +59,7 @@ export function ConnectionList({ selectedId }: { selectedId?: string }) {
           )}
           {image.length > 0 && (
             <>
-              <h3 className="list-label">그림 생성</h3>
+              <h3 className="list-label">IMAGE</h3>
               <ul className="conn-list">
                 {image.map((p) => (
                   <Row key={p.id} p={p} selected={p.id === selectedId} />

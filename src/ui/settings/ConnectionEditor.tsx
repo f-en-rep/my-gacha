@@ -68,7 +68,7 @@ function EditorForm({ initial, isNew }: { initial: ConnectionProfile; isNew: boo
     await db.profiles.put(clean);
     setSaved(clean);
     setDraft(clean);
-    setNotice('저장했어요.');
+    setNotice('저장됨');
     if (isNew) navigate(paths.connection(clean.id), { replace: true });
   }
 
@@ -101,7 +101,7 @@ function EditorForm({ initial, isNew }: { initial: ConnectionProfile; isNew: boo
         void save();
       }}
     >
-      <PageHeader title={title} subtitle={draft.type === 'text' ? '글 생성 (캐릭터 시트, 대사)' : '그림 생성 (초상화)'} back={paths.settings} />
+      <PageHeader title={title} kicker={draft.type === 'text' ? 'TEXT CONNECTION' : 'IMAGE CONNECTION'} back={paths.settings} />
 
       <div className="form-grid">
         {draft.type === 'text' ? <TextFields p={draft} set={set} /> : <ImageFields p={draft} set={set} />}
@@ -110,12 +110,12 @@ function EditorForm({ initial, isNew }: { initial: ConnectionProfile; isNew: boo
       <Toggle
         checked={draft.useRelay}
         onChange={(v) => set({ useRelay: v })}
-        label="중계기 거치기"
-        hint="브라우저가 직접 못 부르는(CORS로 막힌) 서비스일 때 켜요. 연결 진단에서 확인할 수 있어요."
+        label="중계기 사용"
+        hint="브라우저에서 직접 호출이 막힌 서비스일 때 켭니다. 연결 진단에서 확인할 수 있어요."
       />
 
       <p className="key-note">
-        <Icon name="eyeOff" size={18} /> API 키는 이 브라우저에만 저장돼요. 월드 팩이나 백업 파일에는 절대 들어가지 않아요.
+        <Icon name="eyeOff" size={18} /> 키는 이 브라우저에만 저장되고, 월드 팩·백업에는 들어가지 않습니다.
       </p>
 
       {errors.length > 0 && (
@@ -129,12 +129,12 @@ function EditorForm({ initial, isNew }: { initial: ConnectionProfile; isNew: boo
       <div className={`test-box ${test ? 'test-' + test.state : ''}`} aria-live="polite">
         <div className="test-head">
           <button type="button" className="btn" onClick={() => void runTest()} disabled={testing}>
-            <Icon name="pulse" size={18} /> 연결 테스트
+            연결 테스트
           </button>
           <TestBadge outcome={test} running={testing} />
         </div>
         {test && <p className="test-msg">{test.message}</p>}
-        {!test && !testing && <p className="muted small">저장하지 않은 지금 입력값으로 테스트해요. {draft.type === 'image' && '그림은 그리지 않아요(비용 없음).'}</p>}
+        {!test && !testing && <p className="muted small">지금 입력한 값으로 확인합니다.{draft.type === 'image' && ' 그림은 그리지 않습니다.'}</p>}
       </div>
 
       <div className="form-actions">
@@ -143,7 +143,7 @@ function EditorForm({ initial, isNew }: { initial: ConnectionProfile; isNew: boo
             삭제
           </button>
         )}
-        <span className="muted small grow">{notice && !dirty ? notice : dirty ? '저장하지 않은 변경이 있어요' : ''}</span>
+        <span className="muted small grow">{notice && !dirty ? notice : dirty ? '저장 안 됨' : ''}</span>
         <button type="submit" className="btn btn-primary" disabled={!dirty}>
           저장
         </button>
@@ -166,9 +166,9 @@ function TextFields({ p, set }: { p: TextProfile; set: (patch: Partial<TextProfi
     try {
       const list = await listModels(p);
       setModels(list);
-      setModelMsg(list.length ? `${list.length}개 불러왔어요. 모델 칸에 글자를 쳐서 찾을 수 있어요.` : '이 서비스는 목록을 주지 않아요. 모델 이름을 직접 입력하세요.');
+      setModelMsg(list.length ? `${list.length}개. 입력하면 걸러집니다.` : '목록을 받지 못했습니다. 직접 입력하세요.');
     } catch (e) {
-      setModelMsg('목록을 못 불러왔어요: ' + (e instanceof Error ? e.message : String(e)));
+      setModelMsg('목록을 받지 못했습니다: ' + (e instanceof Error ? e.message : String(e)));
     } finally {
       setLoadingModels(false);
     }
@@ -191,7 +191,7 @@ function TextFields({ p, set }: { p: TextProfile; set: (patch: Partial<TextProfi
       <Field label="API 키">
         {(id) => <SecretInput id={id} value={p.apiKey} onChange={(v) => set({ apiKey: v })} placeholder={needsBase ? '필요 없으면 비워 두세요' : 'sk-…'} />}
       </Field>
-      <Field label={needsBase ? '주소 (Base URL, 필수)' : '주소 (Base URL, 선택)'} hint={needsBase ? '예: https://example.com/v1' : '비우면 서비스 기본 주소를 써요.'}>
+      <Field label={needsBase ? 'Base URL' : 'Base URL (선택)'} hint={needsBase ? '예: https://example.com/v1' : '비우면 기본 주소'}>
         {(id) => (
           <input id={id} type="url" inputMode="url" value={p.baseUrl ?? ''} onChange={(e) => set({ baseUrl: e.target.value })} placeholder={needsBase ? 'https://…/v1' : '기본 주소'} autoCapitalize="off" spellCheck={false} />
         )}
@@ -201,7 +201,7 @@ function TextFields({ p, set }: { p: TextProfile; set: (patch: Partial<TextProfi
           <div className="input-group">
             <input id={id} value={p.model} onChange={(e) => set({ model: e.target.value })} list={listId} placeholder={provider?.modelHint} autoCapitalize="off" spellCheck={false} />
             <button type="button" className="btn btn-inline" onClick={() => void fetchModels()} disabled={loadingModels}>
-              {loadingModels ? '불러오는 중…' : '모델 목록 불러오기'}
+              {loadingModels ? '불러오는 중…' : '목록 불러오기'}
             </button>
             <datalist id={listId}>
               {models?.map((m) => (
@@ -211,10 +211,10 @@ function TextFields({ p, set }: { p: TextProfile; set: (patch: Partial<TextProfi
           </div>
         )}
       </Field>
-      <Field label="최대 출력 토큰" hint="생각하는 모델은 넉넉하게 (8000 이상 추천)">
+      <Field label="최대 출력 토큰" hint="추론 모델은 8000 이상">
         {(id) => <NumberInput id={id} value={p.maxTokens} onChange={(v) => set({ maxTokens: v })} min={1} step={256} placeholder="8192" />}
       </Field>
-      <Field label="온도 (temperature)" hint="0은 차분, 1 이상은 다양. 보통 0.7~1.0">
+      <Field label="온도" hint="보통 0.7 ~ 1.0">
         {(id) => <NumberInput id={id} value={p.temperature} onChange={(v) => set({ temperature: v })} min={0} max={2} step={0.05} placeholder="0.9" />}
       </Field>
     </>
@@ -247,10 +247,10 @@ function ImageFields({ p, set }: { p: ImageProfile; set: (patch: Partial<ImagePr
         )}
       </Field>
       <Field label="이름">{(id) => <input id={id} value={p.label} onChange={(e) => set({ label: e.target.value })} placeholder={isNai ? '예: NovelAI 초상화' : '예: PixAI'} />}</Field>
-      <Field label="API 키" hint={isNai ? 'NovelAI 계정 설정의 Persistent API Token' : 'PixAI 설정의 API 키'}>
+      <Field label="API 키" hint={isNai ? 'Account Settings → Persistent API Token' : 'PixAI 설정 → API'}>
         {(id) => <SecretInput id={id} value={p.apiKey} onChange={(v) => set({ apiKey: v })} placeholder={isNai ? 'pst-…' : 'API 키'} />}
       </Field>
-      <Field label="모델" hint={isNai ? undefined : 'PixAI 모델 id를 그대로 붙여 넣으세요.'}>
+      <Field label="모델" hint={isNai ? undefined : 'PixAI 모델 id'}>
         {(id) =>
           isNai ? (
             <select id={id} value={naiKnown ? p.model : '__custom'} onChange={(e) => set({ model: e.target.value === '__custom' ? '' : e.target.value })}>
@@ -283,7 +283,7 @@ function ImageFields({ p, set }: { p: ImageProfile; set: (patch: Partial<ImagePr
           </p>
         )}
       </div>
-      <Field wide label="요청 사이 최소 간격 (초)" hint={<>NovelAI 밴 방지용이에요. 너무 빨리 연달아 요청하면 계정이 막힐 수 있어서, 그림 요청 사이를 이만큼 띄워요. 최소 {MIN_INTERVAL_FLOOR / 1000}초, 기본 10초.</>}>
+      <Field wide label="요청 간격 (초)" hint={<>연달아 요청하면 NovelAI 계정이 제재될 수 있어 간격을 둡니다. 최소 {MIN_INTERVAL_FLOOR / 1000}초.</>}>
         {(id) => (
           <NumberInput
             id={id}

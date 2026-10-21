@@ -44,16 +44,16 @@ export function StoragePanel() {
   const showIosHint = isIos() && !isStandalone();
 
   return (
-    <Section title="저장 공간" icon="database">
+    <Section title="저장 공간">
       <div className="stack">
         <div className="storage-status">
           <span className={`pill ${persisted ? 'pill-ok' : persisted === false ? 'pill-pending' : ''}`}>
-            {persisted === undefined ? '확인 중' : persisted ? '유지됨' : '유지 안 됨'}
+            {persisted === undefined ? '확인 중' : persisted ? '보존됨' : '보존 안 됨'}
           </span>
           <p className="small">
             {persisted
-              ? '브라우저가 이 앱의 데이터를 함부로 지우지 않아요.'
-              : '저장 공간이 부족하거나 오래 안 쓰면 브라우저가 데이터를 지울 수 있어요. 백업을 자주 해 주세요.'}
+              ? '브라우저가 데이터를 임의로 지우지 않습니다.'
+              : '공간이 부족하거나 오래 안 쓰면 브라우저가 지울 수 있습니다. 가끔 백업하세요.'}
           </p>
         </div>
         {persisted === false && (
@@ -65,7 +65,7 @@ export function StoragePanel() {
               await refresh();
             }}
           >
-            저장 공간 유지 다시 요청
+            보존 다시 요청
           </button>
         )}
         {est && (
@@ -79,9 +79,9 @@ export function StoragePanel() {
           </div>
         )}
         <div className={`hint-box ${showIosHint ? 'hint-strong' : ''}`}>
-          <strong>iPhone·iPad 사용자라면</strong>
+          <strong>iPhone · iPad</strong>
           <p className="small">
-            Safari는 7일 넘게 안 쓴 사이트의 데이터를 지울 수 있어요. 공유 버튼 <span aria-hidden="true">⎙</span> → <b>홈 화면에 추가</b>로 앱처럼 설치하면 안전해요.
+            Safari는 7일 넘게 안 연 사이트의 데이터를 지울 수 있습니다. 공유 → <b>홈 화면에 추가</b>로 설치해 두세요.
           </p>
         </div>
       </div>
