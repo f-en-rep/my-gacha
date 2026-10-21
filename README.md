@@ -1,46 +1,46 @@
-# CardBridge
+# my-gacha
 
-RisuAI 봇카드를 SillyTavern과 Marinara Engine에서 쓸 수 있게 옮기는 변환기입니다.
-변환은 브라우저 안에서만 이루어지고, 파일은 어디로도 전송되지 않습니다.
+AI가 세계관과 캐릭터를 만들어 주는 개인용 가챠 게임입니다.
+나와 친구들이 각자 자기 API 키로, 각자 자기 브라우저에서 노는 용도입니다.
 
-## 쓰는 법
+- 서버가 없습니다. 모든 계산과 저장은 브라우저 안에서 이루어집니다.
+- API 키는 이 브라우저에만 저장되고, 월드 팩이나 백업 파일에 들어가지 않습니다.
+- 가챠는 명일방주 규칙을 따릅니다. 뽑기 결과는 AI가 아니라 코드가 정합니다.
+- 만든 월드는 월드 팩(.zip)으로 내보내 친구에게 줄 수 있습니다.
 
-1. https://f-en-rep.github.io/cardbridge.io/ 에 접속하거나, 내려받은 `dist/index.html`을 브라우저로 엽니다. 인터넷 없이도 동작합니다.
-2. 리스 카드(`.png`, `.charx`, `.json`)를 끌어다 놓습니다. 이미지 팩 같은 모듈(`.risum`)도 함께 넣을 수 있습니다.
-3. 어디로 옮길지 고르고 변환합니다. 결과 파일과 변환 보고서가 나옵니다.
+설계는 [docs/PLAN.md](docs/PLAN.md)에 있습니다.
 
-### SillyTavern으로 옮길 때
+## 지원하는 서비스
 
-- 결과물은 `.charx`입니다. ST의 캐릭터 가져오기로 넣으면 이미지가 자동으로 풀립니다.
-- 카드 안에 **CardBridge 리스 실행기**가 JS-Slash-Runner(Tavern Helper) 캐릭터 스크립트로 들어갑니다.
-  이 실행기가 리스와 같은 방식으로 다음을 처리합니다.
-  - CBS 문법: 리스 원본 해석기를 그대로 사용합니다.
-  - 정규식: 리스와 같은 순서와 규칙으로 적용합니다.
-  - Lua 트리거: 리스와 같은 wasmoon 엔진과 같은 함수 목록으로 실행합니다.
-  - 토글: 채팅창 아래 "리스 설정" 버튼에서 고릅니다.
-  - 배경 HTML, 이미지 이름(`{{raw::}}`, `{{asset::}}` 등)
-- 필요한 것: SillyTavern 1.19 이상, JS-Slash-Runner 확장. 카드를 처음 열 때 "스크립트 허용"을 눌러야 합니다.
+- 텍스트: OpenRouter, OpenAI, Claude, Gemini, NanoGPT, OpenAI 호환 주소
+- 그림: NovelAI, PixAI
 
-### Marinara Engine으로 옮길 때
-
-- Marinara는 카드 안의 스크립트를 실행하지 않으므로 조건문을 Marinara 문법(`{{#if var:이름 == "값"}}`)으로 옮깁니다.
-- 토글은 변환할 때 고른 값으로 고정됩니다. Marinara 문법으로 옮길 수 없는 부분은 고른 값으로 미리 계산합니다.
-- Lua 트리거와 배경 HTML은 옮길 수 없습니다. 보고서에 "수동 필요"로 표시됩니다.
+브라우저에서 바로 부를 수 없는 서비스는 같은 사이트의 중계기(`/api/relay`)를 거칩니다.
+설정 → 연결 진단에서 어느 서비스가 중계기가 필요한지 확인할 수 있습니다.
 
 ## 개발
 
 ```bash
 npm install
-node build.mjs
+npm run dev        # 개발 서버
+npm test           # 테스트
+npm run build      # 타입 검사 + 빌드 (dist/)
 ```
 
-- `src/risu/`: 리스 CBS 해석기와 표시 처리. RisuAI 코드를 옮겨 왔습니다.
-- `src/convert/`: 리스 → ST, Marinara 변환
-- `src/bridge/`: ST 안에서 돌아가는 리스 실행기
-- `src/ui/`: 변환기 화면
-- `vendor/risu/`: RisuAI 원본 파일. 출처와 바꾼 부분은 `vendor/risu/SOURCE.txt`에 있습니다.
+## 배포 (Cloudflare Pages)
 
-## 라이선스
+- 빌드 명령: `npm run build`
+- 출력 폴더: `dist`
+- `functions/` 폴더는 Cloudflare Pages Functions로 자동 배포됩니다 (중계기).
 
-GPL-3.0. RisuAI(© Kwaroran, GPL-3.0)의 코드를 포함합니다.
-json.lua(rxi, MIT)와 RPack 표(Kwaroran, MIT)도 포함합니다.
+## 폴더
+
+| 폴더 | 내용 |
+|---|---|
+| `src/types/` | 데이터 모양 (월드, 캐릭터, 배너, 진행, 설정) |
+| `src/core/` | 게임 규칙. 화면과 저장을 모르는 순수 함수 (가챠, 난수) |
+| `src/gen/` | AI 호출: 텍스트, 그림, 작업 큐 |
+| `src/net/` | 외부 API 호출과 중계기 경유 |
+| `src/db/` | 브라우저 저장소 (IndexedDB) |
+| `src/ui/` | 화면 |
+| `functions/` | Cloudflare Pages Functions 중계기 |
