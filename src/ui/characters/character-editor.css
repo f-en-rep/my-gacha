@@ -49,7 +49,7 @@
 .ce-h {
   margin: 0;
   padding-top: 14px;
-  border-top: 1px solid var(--ink);
+  border-top: 1px solid var(--line);
   font-size: 14px;
   font-weight: 700;
 }

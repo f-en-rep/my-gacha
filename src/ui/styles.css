@@ -556,8 +556,8 @@ input[type='number'] {
   width: 44px;
   height: 26px;
   margin: 0;
-  border: 1px solid var(--ink-3);
-  border-radius: 2px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
   background: var(--sunken);
   cursor: pointer;
   transition: background-color 0.15s;
@@ -570,17 +570,15 @@ input[type='number'] {
   left: 3px;
   width: 18px;
   height: 18px;
-  background: var(--ink-3);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
   transition: transform 0.15s;
 }
 
 .switch:checked {
-  border-color: var(--ink);
+  border-color: var(--accent);
   background: var(--accent);
-}
-
-.switch:checked::after {
-  background: var(--ink);
 }
 
 .switch:checked::after {
