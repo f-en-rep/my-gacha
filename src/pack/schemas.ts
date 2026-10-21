@@ -32,6 +32,14 @@ export const manifestSchema = z.object({
   images: z.array(imageEntrySchema).max(5000),
   /** 백업에만 */
   saves: z.number().int().nonnegative().optional(),
+  /** 스토리를 넣었을 때만 (예전 팩에는 없다) */
+  story: z
+    .object({
+      chapters: z.number().int().nonnegative(),
+      beats: z.number().int().nonnegative(),
+      locations: z.number().int().nonnegative(),
+    })
+    .optional(),
 });
 export type Manifest = z.infer<typeof manifestSchema>;
 
@@ -106,6 +114,15 @@ export const saveSchema = z.object({
   rngState: z.number(),
   featuredCharacterId: id.optional(),
   lastDailyClaim: z.string().max(20).optional(),
+  story: z
+    .record(
+      z.object({
+        beat: z.number().int().nonnegative(),
+        segment: z.number().int().nonnegative(),
+        clearedAt: iso.optional(),
+      }),
+    )
+    .optional(),
   createdAt: iso,
   updatedAt: iso,
 });
@@ -121,3 +138,52 @@ export const pullRecordSchema = z.object({
 });
 
 export const pullsFileSchema = z.array(pullRecordSchema).max(1_000_000);
+
+// ── 스토리 (story/ 아래, 선택) ──
+
+export const locationSchema = z.object({
+  id,
+  worldId: z.string().optional(),
+  name: text(500),
+  description: text(),
+  imageTags: text(4000),
+  artId: id.optional(),
+  createdAt: iso,
+});
+
+const storyNodeSchema = z.object({
+  title: text(500),
+  guide: text(),
+  castIds: z.array(id).max(200),
+  locationId: z.string().max(200),
+});
+
+export const chapterSchema = z.object({
+  id,
+  worldId: z.string().optional(),
+  index: z.number().int().nonnegative().max(100000),
+  title: text(500),
+  synopsis: text(),
+  nodes: z.array(storyNodeSchema).max(500),
+  summary: text().optional(),
+  ledger: text().optional(),
+  status: z.enum(['planned', 'complete']),
+  createdAt: iso,
+  updatedAt: iso,
+});
+
+const segmentSchema = z.object({
+  kind: z.enum(['narration', 'line', 'thought']),
+  speakerId: id.optional(),
+  speakerName: text(500).optional(),
+  text: text(),
+});
+
+export const beatSchema = z.object({
+  id,
+  worldId: z.string().optional(),
+  chapterId: id,
+  index: z.number().int().nonnegative().max(100000),
+  segments: z.array(segmentSchema).max(5000),
+  createdAt: iso,
+});

@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { db } from '../db';
-import { SCHEMA_VERSION, type Asset, type Banner, type Character, type PullRecord, type Save, type World } from '../types';
+import { SCHEMA_VERSION, type Asset, type Banner, type Beat, type Chapter, type Character, type Location, type PullRecord, type Save, type World } from '../types';
 import { exportBackup, exportWorldPack, importBackup, importWorldPack, packFilename, PackError } from './index';
 
 const T = '2026-10-01T00:00:00.000Z';
@@ -262,6 +262,177 @@ describe('잘못된 파일', () => {
     const files = await unzipBlob((await exportWorldPack('w1', { includeStory: false })).blob);
     delete files['world.json'];
     await expect(importWorldPack(zipBlob(files))).rejects.toThrow(/world.json 파일이 없습니다/);
+  });
+});
+
+const BG = new Uint8Array([137, 80, 78, 71, 5, 6, 7]);
+
+/** 장소 하나(배경 그림 a2), 챕터 두 개, 장면 두 개. 세이브에 읽은 위치 */
+async function seedStory() {
+  const bg: Asset = { id: 'a2', worldId: 'w1', mime: 'image/png', blob: new Blob([BG], { type: 'image/png' }), width: 1216, height: 832, createdAt: T };
+  const loc: Location = { id: 'l1', worldId: 'w1', name: '온실', description: '유리 온실', imageTags: 'greenhouse, no humans', artId: 'a2', createdAt: T };
+  const ch1: Chapter = {
+    id: 'ch1',
+    worldId: 'w1',
+    index: 1,
+    title: '첫날',
+    synopsis: '정원사가 된다',
+    nodes: [
+      { title: '도착', guide: '온실에 도착', castIds: ['c6', 'ghost'], locationId: 'l1' },
+      { title: '만남', guide: '만난다', castIds: ['c5'], locationId: 'nowhere' },
+    ],
+    summary: '요약',
+    ledger: '장부',
+    status: 'complete',
+    createdAt: T,
+    updatedAt: T,
+  };
+  const ch2: Chapter = { ...ch1, id: 'ch2', index: 2, title: '둘째 날', nodes: [{ title: '아침', guide: '', castIds: [], locationId: 'l1' }], summary: undefined, ledger: undefined, status: 'planned' };
+  const beats: Beat[] = [
+    {
+      id: 'bt1',
+      worldId: 'w1',
+      chapterId: 'ch1',
+      index: 0,
+      segments: [
+        { kind: 'narration', text: '바람이 분다.' },
+        { kind: 'line', speakerId: 'c6', speakerName: '캐릭터 c6', text: '안녕!' },
+        { kind: 'thought', speakerId: 'ghost', speakerName: '지나가던 사람', text: '…' },
+      ],
+      createdAt: T,
+    },
+    { id: 'bt2', worldId: 'w1', chapterId: 'ch1', index: 1, segments: [{ kind: 'line', speakerName: '행인', text: '어서 와' }], createdAt: T },
+  ];
+  await db.assets.put(bg);
+  await db.locations.put(loc);
+  await db.chapters.bulkPut([ch1, ch2]);
+  await db.beats.bulkPut(beats);
+  await db.saves.update('s1', { story: { ch1: { beat: 1, segment: 0, clearedAt: T }, ch2: { beat: 0, segment: 3 }, gone: { beat: 0, segment: 0 } } });
+}
+
+describe('스토리', () => {
+  beforeEach(seedStory);
+
+  it('스토리 없이 내보내면 story/ 파일과 장소 그림이 없다', async () => {
+    const files = await unzipBlob((await exportWorldPack('w1', { includeStory: false })).blob);
+    const names = Object.keys(files);
+    expect(names.some((n) => n.startsWith('story/'))).toBe(false);
+    expect(names).not.toContain('images/a2.png');
+    expect(names).toContain('images/a1.webp');
+    const m = JSON.parse(strFromU8(files['manifest.json']!));
+    expect(m.includes).toEqual({ story: false });
+    expect(m.story).toBeUndefined();
+    expect(m.images.map((i: { assetId: string }) => i.assetId)).toEqual(['a1']);
+
+    const id = await importWorldPack(new Blob([await (await exportWorldPack('w1', { includeStory: false })).blob.arrayBuffer()]));
+    expect(await db.chapters.where('worldId').equals(id).count()).toBe(0);
+    expect(await db.locations.where('worldId').equals(id).count()).toBe(0);
+  });
+
+  it('스토리 포함 내보내기', async () => {
+    const files = await unzipBlob((await exportWorldPack('w1', { includeStory: true })).blob);
+    const names = Object.keys(files);
+    for (const n of ['story/chapters/ch1.json', 'story/chapters/ch2.json', 'story/beats/bt1.json', 'story/beats/bt2.json', 'story/locations/l1.json', 'images/a2.png']) {
+      expect(names).toContain(n);
+    }
+    const m = JSON.parse(strFromU8(files['manifest.json']!));
+    expect(m.formatVersion).toBe(1);
+    expect(m.includes).toEqual({ story: true });
+    expect(m.story).toEqual({ chapters: 2, beats: 2, locations: 1 });
+    expect(m.images.find((i: { assetId: string }) => i.assetId === 'a2')).toMatchObject({ file: 'images/a2.png', mime: 'image/png' });
+    // 진행은 여전히 없다
+    expect(names.some((n) => n.startsWith('saves/'))).toBe(false);
+  });
+
+  it('왕복: 챕터·장면·장소 id와 참조가 새로 이어진다', async () => {
+    const id = await importWorldPack((await exportWorldPack('w1', { includeStory: true })).blob);
+    const chars = await db.characters.where('worldId').equals(id).toArray();
+    const byRarity = (r: number) => chars.find((c) => c.rarity === r)!;
+
+    const [loc] = await db.locations.where('worldId').equals(id).toArray();
+    expect(loc!.id).not.toBe('l1');
+    expect(loc!.name).toBe('온실');
+    expect(loc!.artId).toBeTruthy();
+    expect(loc!.artId).not.toBe('a2');
+    const art = (await db.assets.get(loc!.artId!))!;
+    expect(art.worldId).toBe(id);
+    expect(new Uint8Array(await art.blob.arrayBuffer())).toEqual(BG);
+
+    const chapters = (await db.chapters.where('worldId').equals(id).toArray()).sort((a, b) => a.index - b.index);
+    expect(chapters).toHaveLength(2);
+    const [c1, c2] = chapters;
+    expect(c1!.id).not.toBe('ch1');
+    expect(c1!.status).toBe('complete');
+    expect(c1!.summary).toBe('요약');
+    expect(c1!.ledger).toBe('장부');
+    expect(c2!.status).toBe('planned');
+    expect(c1!.nodes[0]!.castIds).toEqual([byRarity(6).id]); // 없는 캐릭터는 빠진다
+    expect(c1!.nodes[0]!.locationId).toBe(loc!.id);
+    expect(c1!.nodes[1]!.castIds).toEqual([byRarity(5).id]);
+    expect(c1!.nodes[1]!.locationId).toBe('');
+    expect(c2!.nodes[0]!.locationId).toBe(loc!.id);
+
+    const beats = (await db.beats.where('chapterId').equals(c1!.id).toArray()).sort((a, b) => a.index - b.index);
+    expect(beats).toHaveLength(2);
+    expect(beats.every((b) => b.worldId === id && b.id !== 'bt1' && b.id !== 'bt2')).toBe(true);
+    const segs = beats[0]!.segments;
+    expect(segs[1]).toEqual({ kind: 'line', speakerId: byRarity(6).id, speakerName: '캐릭터 c6', text: '안녕!' });
+    expect(segs[2]).toEqual({ kind: 'thought', speakerName: '지나가던 사람', text: '…' });
+    expect(beats[1]!.segments[0]!.speakerId).toBeUndefined();
+
+    // 원래 스토리는 그대로
+    expect(await db.chapters.get('ch1')).toBeTruthy();
+  });
+
+  it('백업: 스토리가 늘 들어가고 세이브의 읽은 위치가 새 챕터 id로 이어진다', async () => {
+    const { blob } = await exportBackup('w1');
+    const files = await unzipBlob(blob);
+    expect(Object.keys(files)).toContain('story/chapters/ch1.json');
+    expect(Object.keys(files)).toContain('images/a2.png');
+    expect(JSON.parse(strFromU8(files['saves/s1.json']!)).story.ch1.beat).toBe(1);
+
+    const id = await importBackup(blob);
+    const chapters = (await db.chapters.where('worldId').equals(id).toArray()).sort((a, b) => a.index - b.index);
+    const [save] = await db.saves.where('worldId').equals(id).toArray();
+    expect(save!.story).toEqual({
+      [chapters[0]!.id]: { beat: 1, segment: 0, clearedAt: T },
+      [chapters[1]!.id]: { beat: 0, segment: 3 },
+    });
+    expect(await db.beats.where('worldId').equals(id).count()).toBe(2);
+    const [loc] = await db.locations.where('worldId').equals(id).toArray();
+    expect(await db.assets.get(loc!.artId!)).toBeTruthy();
+  });
+
+  it('스토리 파일 없는 예전 팩도 열린다', async () => {
+    const files = await unzipBlob((await exportWorldPack('w1', { includeStory: false })).blob);
+    const m = JSON.parse(strFromU8(files['manifest.json']!));
+    delete m.story;
+    files['manifest.json'] = strToU8(JSON.stringify(m));
+    const id = await importWorldPack(zipBlob(files));
+    expect(await db.characters.where('worldId').equals(id).count()).toBe(4);
+    expect(await db.chapters.where('worldId').equals(id).count()).toBe(0);
+
+    // 스토리 이전 형식의 백업 (세이브에 story 없음)
+    const bfiles = await unzipBlob((await exportBackup('w1')).blob);
+    for (const n of Object.keys(bfiles)) if (n.startsWith('story/')) delete bfiles[n];
+    const s = JSON.parse(strFromU8(bfiles['saves/s1.json']!));
+    delete s.story;
+    bfiles['saves/s1.json'] = strToU8(JSON.stringify(s));
+    const bid = await importBackup(zipBlob(bfiles));
+    const [save] = await db.saves.where('worldId').equals(bid).toArray();
+    expect(save!.story).toBeUndefined();
+    expect(save!.wallet.pull).toBe(1234);
+  });
+
+  it('망가진 스토리 파일이면 아무것도 쓰지 않는다', async () => {
+    const n = await db.worlds.count();
+    const chapters = await db.chapters.count();
+    const files = await unzipBlob((await exportWorldPack('w1', { includeStory: true })).blob);
+    const b = JSON.parse(strFromU8(files['story/beats/bt1.json']!));
+    files['story/beats/bt1.json'] = strToU8(JSON.stringify({ ...b, segments: [{ kind: 'shout', text: 'x' }] }));
+    await expect(importWorldPack(zipBlob(files))).rejects.toThrow(/story\/beats\/bt1.json 내용이 올바르지 않습니다/);
+    expect(await db.worlds.count()).toBe(n);
+    expect(await db.chapters.count()).toBe(chapters);
   });
 });
 

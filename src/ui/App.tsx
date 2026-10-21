@@ -6,17 +6,20 @@ import { PullPanel } from './screens/PullScreen';
 import { CharactersPanel } from './screens/CharactersScreen';
 import { WorldPanel } from './screens/WorldPanel';
 import { SettingsPanel } from './settings/SettingsPanel';
+import { StoryPanel } from './story/StoryPanel';
 
 function PanelFor({ route }: { route: Route }) {
   switch (route.name) {
     case 'home':
       return null;
     case 'pull':
-      return <PullPanel />;
+      return <PullPanel banner={route.banner} />;
     case 'characters':
       return <CharactersPanel id={route.id} />;
     case 'world':
       return <WorldPanel />;
+    case 'story':
+      return <StoryPanel chapterId={route.chapterId} read={route.read} />;
     case 'settings':
       return <SettingsPanel sub={route.sub} />;
   }

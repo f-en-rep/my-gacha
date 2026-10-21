@@ -317,3 +317,29 @@ export function characterListSchema(opts: CharacterSchemaOptions): ZodType<Chara
     }),
   );
 }
+
+// ---------- 새 배너 이름·소개 ----------
+
+export interface BannerMeta {
+  name: string;
+  description: string;
+}
+
+export function bannerMetaSchema(): ZodType<BannerMeta> {
+  return asSchema(
+    z.unknown().transform((raw, ctx): BannerMeta => {
+      const o: Obj | undefined = isObj(raw) ? (isObj(pick(raw, 'banner')) ? (pick(raw, 'banner') as Obj) : raw) : undefined;
+      if (!o) {
+        issue(ctx, [], 'Expected {"name": "", "description": ""}.');
+        return z.NEVER;
+      }
+      const name = looseStr(pick(o, 'name', 'title', 'bannerName', 'bannerTitle'))
+        .replace(/^["'「『\[]+|["'」』\]]+$/g, '')
+        .trim();
+      if (!name) issue(ctx, ['name'], 'Required: a short banner title.');
+      else if (name.length > 60) issue(ctx, ['name'], 'Too long: keep the banner title under 40 characters.');
+      const description = looseStr(pick(o, 'description', 'desc', 'summary', 'tagline', 'intro'));
+      return { name, description };
+    }),
+  );
+}

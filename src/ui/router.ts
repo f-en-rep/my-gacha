@@ -5,9 +5,10 @@ export type SettingsSub = { kind: 'connection'; id: string } | { kind: 'routing'
 
 export type Route =
   | { name: 'home' }
-  | { name: 'pull' }
+  | { name: 'pull'; banner?: 'new' | { edit: string } }
   | { name: 'characters'; id?: string }
   | { name: 'world' }
+  | { name: 'story'; chapterId?: string; read?: boolean }
   | { name: 'settings'; sub?: SettingsSub };
 
 export type PanelName = Exclude<Route['name'], 'home'>;
@@ -17,7 +18,12 @@ export function parseHash(hash: string): Route {
   const [a, b, c] = parts;
   switch (a) {
     case 'pull':
+      if (b === 'new') return { name: 'pull', banner: 'new' };
+      if (b === 'edit' && c) return { name: 'pull', banner: { edit: c } };
       return { name: 'pull' };
+    case 'story':
+      if (b && c === 'read') return { name: 'story', chapterId: b, read: true };
+      return b ? { name: 'story', chapterId: b } : { name: 'story' };
     case 'characters':
       return b ? { name: 'characters', id: b } : { name: 'characters' };
     case 'world':
@@ -59,6 +65,11 @@ export const paths = {
   characters: '/characters',
   character: (id: string) => `/characters/${encodeURIComponent(id)}`,
   world: '/world',
+  newBanner: '/pull/new',
+  editBanner: (id: string) => `/pull/edit/${encodeURIComponent(id)}`,
+  story: '/story',
+  chapter: (id: string) => `/story/${encodeURIComponent(id)}`,
+  read: (id: string) => `/story/${encodeURIComponent(id)}/read`,
   settings: '/settings',
   routing: '/settings/routing',
   storage: '/settings/storage',

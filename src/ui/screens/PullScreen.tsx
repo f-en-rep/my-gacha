@@ -7,8 +7,9 @@ import type { Character, Id, Save } from '../../types';
 import { EmptyState } from '../common';
 import { useSettings } from '../hooks';
 import { PageHint, Panel } from '../panel/Panel';
-import { paths } from '../router';
+import { navigate, paths } from '../router';
 import { BannerDetail } from '../pull/BannerDetail';
+import { BannerEditor } from '../pull/BannerEditor';
 import { BannerList } from '../pull/BannerList';
 import { PullHistory } from '../pull/PullHistory';
 import { Reveal } from '../pull/Reveal';
@@ -50,7 +51,8 @@ function NoWorld({ draft }: { draft: boolean }) {
   );
 }
 
-export function PullPanel() {
+/** banner: 라우트의 배너 편집 상태 (새 배너 / 고칠 배너 id). 있으면 오른쪽 페이지가 편집 화면 */
+export function PullPanel({ banner: editing }: { banner?: 'new' | { edit: Id } } = {}) {
   const { loading, world, save } = useActiveGame();
   const ready = !!world && world.status === 'ready' && !!save;
   const banners = useBanners(ready ? world.id : undefined);
@@ -73,6 +75,12 @@ export function PullPanel() {
   useEffect(() => {
     setMessage(undefined);
   }, [banner?.id]);
+
+  // 편집 화면을 열고 닫을 때 페이지 스크롤을 맨 위로 (폰 시트, 넓은 책의 각 페이지)
+  const editKey = editing === undefined ? '' : editing === 'new' ? 'new' : editing.edit;
+  useEffect(() => {
+    for (const el of document.querySelectorAll<HTMLElement>('.panel, .book, .book-page')) el.scrollTop = 0;
+  }, [editKey]);
 
   if (loading) return <Panel name="pull" code="HEADHUNT" title="뽑기" left={null} right={null} />;
 
@@ -172,34 +180,51 @@ export function PullPanel() {
           <div className="pl-left">
             {save.freeMode && <span className="pl-free pl-free-top">자유 모드</span>}
             {banners && banners.length > 0 ? (
-              <BannerList banners={banners} selectedId={banner?.id} onSelect={select} />
+              <BannerList
+                banners={banners}
+                selectedId={editing === 'new' ? undefined : editing ? editing.edit : banner?.id}
+                onSelect={(id) => {
+                  select(id);
+                  if (editing) navigate(paths.pull);
+                }}
+                editable
+                creating={editing === 'new'}
+              />
             ) : banners ? (
               <EmptyState title="열린 배너가 없습니다">
                 <p>
-                  <a href={'#' + paths.world}>월드</a>에서 배너를 추가하세요.
+                  <a href={'#' + paths.newBanner}>새 배너 만들기</a>로 배너를 추가하세요.
                 </p>
               </EmptyState>
             ) : null}
             <PullHistory {...historyProps} className="pl-history-wide" idSuffix="wide" />
           </div>
         }
+        focus={editing ? 'right' : 'both'}
+        back={editing ? paths.pull : undefined}
         right={
-          <div className="pl-right">
-            {banner && cast ? (
-              <BannerDetail
-                world={world}
-                save={shownSave}
-                banner={banner}
-                cast={cast}
-                rules={rules}
-                busy={busy || !!reveal}
-                message={message}
-                onPull={(n) => void onPull(n)}
-                onSpark={(id) => void onSpark(id)}
-              />
-            ) : null}
-            <PullHistory {...historyProps} className="pl-history-narrow" idSuffix="narrow" />
-          </div>
+          editing ? (
+            banners && cast ? (
+              <BannerEditor world={world} banners={banners} cast={cast} mode={editing} onSaved={select} />
+            ) : null
+          ) : (
+            <div className="pl-right">
+              {banner && cast ? (
+                <BannerDetail
+                  world={world}
+                  save={shownSave}
+                  banner={banner}
+                  cast={cast}
+                  rules={rules}
+                  busy={busy || !!reveal}
+                  message={message}
+                  onPull={(n) => void onPull(n)}
+                  onSpark={(id) => void onSpark(id)}
+                />
+              ) : null}
+              <PullHistory {...historyProps} className="pl-history-narrow" idSuffix="narrow" />
+            </div>
+          )
         }
       />
       {reveal && <Reveal outcomes={reveal.outcomes} cast={cast} title={reveal.title} shopName={world.currency.shop || '상점 재화'} onClose={() => setReveal(undefined)} />}
