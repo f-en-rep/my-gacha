@@ -201,10 +201,10 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
           <strong>캐릭터</strong>
           <span className="kicker">OPERATORS</span>
         </a>
-        <span className="menu-locked" aria-disabled="true">
+        <a href={'#' + paths.story}>
           <strong>스토리</strong>
-          <span className="kicker">PHASE 3</span>
-        </span>
+          <span className="kicker">STORY</span>
+        </a>
         <a href={'#' + paths.world}>
           <strong>월드</strong>
           <span className="kicker">WORLD</span>

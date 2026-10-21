@@ -1,0 +1,850 @@
+/* 스토리: 패널의 챕터 목록·상세, 그리고 화면 전체를 덮는 읽기 화면 */
+
+/* ── 패널: 챕터 목록 ─────────────────────────────── */
+.st-empty-list {
+  padding: 16px 0;
+}
+
+.st-ch-row {
+  gap: 14px;
+}
+
+.st-ch-no {
+  flex: none;
+  width: 52px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.st-state {
+  font-family: var(--mono);
+  font-size: 11.5px !important;
+  letter-spacing: 0.02em;
+}
+
+.st-state-reading {
+  color: var(--wait) !important;
+}
+
+.st-state-done {
+  color: var(--ok) !important;
+}
+
+.st-write {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.st-write-btn {
+  min-height: 52px;
+  box-shadow: 3px 3px 0 var(--ink);
+  font-size: 15px;
+}
+
+.st-write-btn:disabled {
+  box-shadow: none;
+}
+
+.st-plan-run {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--ink);
+  border-left: 3px solid var(--accent);
+}
+
+.st-plan-run .kicker {
+  margin: 0;
+}
+
+.st-plan-stage {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.st-error {
+  padding: 12px 14px;
+  background: var(--fail-soft);
+  border: 1px solid var(--fail);
+  color: var(--ink);
+}
+
+.st-error strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--fail);
+  font-size: 13.5px;
+}
+
+.st-spinner {
+  flex: none;
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  border: 1px solid var(--ink);
+  animation: st-spin 1.2s steps(4) infinite;
+}
+
+@keyframes st-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── 패널: 챕터 상세 ─────────────────────────────── */
+.st-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.st-detail-head {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--ink);
+}
+
+.st-detail-head .kicker {
+  margin-bottom: 4px;
+}
+
+.st-detail-head h2 {
+  font-size: 24px;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.st-teaser {
+  margin-top: 10px;
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+
+.st-teaser.muted {
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+.st-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.st-actions .btn {
+  flex: 1 1 140px;
+}
+
+.st-actions .btn .mono {
+  opacity: 0.7;
+}
+
+.st-cleared {
+  flex: 1 1 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--ok-soft);
+  border: 1px solid var(--ok);
+  color: var(--ok);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.st-reward-note {
+  margin-top: -8px;
+}
+
+.st-scenes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.st-scenes li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 48px;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.st-scene-no {
+  flex: none;
+  width: 28px;
+  color: var(--ink-3);
+}
+
+.st-scene-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.st-scenes .is-locked .st-scene-title {
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-weight: 500;
+  letter-spacing: 0.2em;
+}
+
+.st-scenes .is-here {
+  padding-left: 10px;
+  background: var(--surface);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.st-here {
+  flex: none;
+  padding: 1px 6px;
+  margin-right: 8px;
+  background: var(--accent);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+/* ── 읽기 화면 ───────────────────────────────────── */
+.st-reader {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  color: var(--ink);
+  overflow: hidden;
+  outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+  animation: fade 0.2s;
+}
+
+.st-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.st-bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  animation: fade 0.5s;
+}
+
+/* 그림이 아직 없을 때: 빗금 종이 + 장소 이름 */
+.st-bg-blank {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 24px 34vh;
+  background: repeating-linear-gradient(135deg, transparent 0 11px, rgba(23, 23, 26, 0.045) 11px 12px), var(--paper);
+  text-align: center;
+}
+
+.st-bg-kicker {
+  color: var(--ink-3);
+  font-size: 11px;
+  letter-spacing: 0.24em;
+}
+
+.st-bg-name {
+  font-size: clamp(22px, 4vw, 40px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: rgba(23, 23, 26, 0.18);
+}
+
+/* 위쪽 막대 */
+.st-top {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: max(10px, env(safe-area-inset-top, 0px)) 16px 10px;
+  background: rgba(251, 250, 246, 0.92);
+  border-bottom: 1px solid var(--ink);
+}
+
+.st-top-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.st-top-title .kicker {
+  margin-bottom: 1px;
+  white-space: nowrap;
+}
+
+.st-top-title h2 {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.st-controls {
+  flex: none;
+  display: flex;
+  gap: 6px;
+}
+
+.st-ctl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  background: var(--surface);
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.st-ctl:hover:not(:disabled) {
+  background: var(--sunken);
+}
+
+.st-ctl:disabled {
+  border-color: var(--rule);
+  color: var(--ink-3);
+  cursor: default;
+}
+
+.st-ctl[aria-pressed='true'] {
+  background: var(--accent);
+  box-shadow: inset 0 -3px 0 var(--ink);
+}
+
+.st-ctl-close {
+  background: var(--ink);
+  color: var(--surface);
+}
+
+.st-ctl-close:hover:not(:disabled) {
+  background: #000;
+}
+
+/* 무대: 인물과 대사 상자 */
+.st-stage {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0 16px calc(16px + var(--safe-b));
+  cursor: pointer;
+}
+
+.st-cast {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: min(78%, 760px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0;
+  padding: 0 8px;
+  pointer-events: none;
+}
+
+.st-figure {
+  flex: 0 1 34%;
+  max-width: 420px;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.st-cast[data-count='1'] .st-figure {
+  flex-basis: 70%;
+}
+
+.st-cast[data-count='2'] .st-figure {
+  flex-basis: 46%;
+}
+
+.st-figure-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+/* 초상화가 없을 때의 희귀도 카드: 너무 크지 않게, 대사 상자 위로 */
+.st-figure-img.card-art {
+  width: auto;
+  max-width: 92%;
+  height: auto;
+  max-height: 46%;
+  margin-bottom: 176px;
+  border: 1px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.st-figure-sil {
+  width: 70%;
+  height: 80%;
+  fill: rgba(23, 23, 26, 0.18);
+}
+
+.st-figure[data-state='dim'] {
+  opacity: 0.42;
+  filter: saturate(0.6);
+}
+
+.st-figure[data-state='idle'] {
+  opacity: 0.88;
+}
+
+.st-figure[data-state='speaking'] {
+  transform: translateY(-14px);
+}
+
+/* 장면 제목 카드 */
+.st-title-card {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: calc(100% - 32px);
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--ink);
+  border-left: 4px solid var(--accent);
+  box-shadow: 3px 3px 0 var(--ink);
+  pointer-events: none;
+  animation: st-card-in 2.6s ease forwards;
+}
+
+.st-title-card .mono {
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+.st-title-card strong {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+@keyframes st-card-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  10%,
+  80% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* 대사 상자 (로비 대사 상자와 같은 말투) */
+.st-box {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 920px;
+  min-height: 136px;
+  margin: 0 auto;
+  padding: 22px 18px 26px;
+  background: var(--surface);
+  border: 1px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.st-name {
+  position: absolute;
+  top: -13px;
+  left: 12px;
+  height: 24px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.st-text {
+  font-size: 16px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.st-kind-narration .st-text {
+  color: var(--ink-2);
+  font-size: 15px;
+}
+
+.st-kind-narration {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: var(--ink-2);
+  box-shadow: 4px 4px 0 var(--ink-2);
+}
+
+.st-kind-thought .st-text {
+  color: var(--ink-2);
+  font-style: italic;
+}
+
+.st-kind-thought .st-name {
+  background: var(--surface);
+  color: var(--ink-2);
+  border: 1px dashed var(--ink-2);
+}
+
+.st-next {
+  position: absolute;
+  right: 12px;
+  bottom: 6px;
+  font-size: 10px;
+  animation: blink 1s steps(2) infinite;
+}
+
+.st-count {
+  position: absolute;
+  left: 18px;
+  bottom: 5px;
+  color: var(--ink-3);
+  font-size: 10px;
+}
+
+/* 가운데 카드: 쓰는 중 / 오류 / 완료 */
+.st-card {
+  position: relative;
+  z-index: 2;
+  align-self: center;
+  width: min(420px, 100%);
+  margin: auto 0;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+  cursor: default;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.st-card .kicker {
+  margin-bottom: 8px;
+}
+
+.st-card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.st-card .small {
+  margin-top: 6px;
+}
+
+.st-err {
+  border-left: 4px solid var(--fail);
+}
+
+.st-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.st-card-actions .btn {
+  flex: 1;
+}
+
+.st-done {
+  text-align: left;
+  border-top: 6px solid var(--accent);
+}
+
+.st-done-title {
+  font-size: 28px;
+}
+
+.st-done-name {
+  margin-top: 2px;
+  color: var(--ink-2);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.st-reward {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 6px 12px;
+  background: var(--accent-soft);
+  border: 1px solid var(--ink);
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.st-reward i {
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  border: 1px solid var(--ink);
+  transform: rotate(45deg);
+}
+
+/* 로그 시트 */
+.st-log-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(23, 23, 26, 0.32);
+  animation: fade 0.15s;
+}
+
+.st-log {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 760px;
+  height: min(78dvh, 720px);
+  background: #fbfaf6;
+  border-top: 1px solid var(--ink);
+  animation: sheet-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  cursor: default;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.st-log-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--ink);
+}
+
+.st-log-head > div {
+  flex: 1;
+}
+
+.st-log-head .kicker {
+  margin-bottom: 2px;
+}
+
+.st-log-head h3 {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.st-log-close {
+  border-color: var(--ink);
+}
+
+.st-log-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 16px calc(24px + var(--safe-b));
+}
+
+.st-log-list h4 {
+  margin: 18px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.st-log-line {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 0;
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+
+.st-log-line b {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.st-log-line.st-kind-narration span {
+  color: var(--ink-2);
+}
+
+.st-log-line.st-kind-thought span {
+  color: var(--ink-2);
+  font-style: italic;
+}
+
+/* 폰: 위 막대는 두 줄 대신 짧게 */
+@media (max-width: 520px) {
+  .st-top {
+    gap: 8px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .st-controls {
+    gap: 4px;
+  }
+
+  .st-ctl {
+    padding: 0 9px;
+    font-size: 12.5px;
+  }
+
+  .st-ctl-text {
+    display: none;
+  }
+
+  .st-stage {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .st-cast {
+    height: 74%;
+  }
+
+  .st-text {
+    font-size: 15.5px;
+  }
+}
+
+/* 폰 가로: 키가 낮으니 인물을 줄이고 상자를 낮게 */
+@media (max-height: 500px) {
+  .st-top {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .st-top-title .kicker {
+    display: none;
+  }
+
+  .st-box {
+    min-height: 92px;
+    padding: 16px 16px 18px;
+  }
+
+  .st-text {
+    font-size: 14.5px;
+    line-height: 1.6;
+  }
+
+  .st-stage {
+    padding-bottom: calc(10px + var(--safe-b));
+  }
+
+  .st-cast {
+    height: 100%;
+  }
+
+  .st-figure-img.card-art {
+    max-height: 52%;
+    margin-bottom: 118px;
+  }
+
+  .st-figure {
+    flex-basis: 24% !important;
+  }
+
+  .st-log {
+    height: 90dvh;
+  }
+}
+
+@media (min-width: 1000px) {
+  .st-top {
+    padding: 14px 28px;
+  }
+
+  .st-top-title h2 {
+    font-size: 18px;
+  }
+
+  .st-stage {
+    padding: 0 32px 32px;
+  }
+
+  .st-box {
+    min-height: 160px;
+    padding: 26px 28px 30px;
+  }
+
+  .st-text {
+    font-size: 17.5px;
+  }
+
+  .st-figure {
+    max-width: 360px;
+  }
+
+  .st-figure-img.card-art {
+    max-height: 46%;
+    margin-bottom: 220px;
+  }
+
+  .st-log {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 480px;
+    height: auto;
+    border-top: 0;
+    border-left: 1px solid var(--ink);
+    animation: book-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}

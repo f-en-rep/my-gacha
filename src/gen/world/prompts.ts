@@ -1,50 +1,55 @@
 // 월드 생성 프롬프트. 고치기 쉽게 여기에만 모아 둔다.
 // 프롬프트 자체는 영어, 결과 글은 월드 언어로 쓰게 지시한다. 그림 태그는 항상 영어.
-import type { ChatMessage } from '../text';
-import type { Character, Rarity, TagCatalog, World } from '../../types';
-import { ARCHETYPES } from './stats';
-import { ELEMENT_COUNT, ROLE_COUNT } from './schema';
-import { TRAIT_RARITIES, defaultTraits, knownPositions } from './tags';
+import type { ChatMessage } from "../text";
+import type { Character, Rarity, TagCatalog, World } from "../../types";
+import { ARCHETYPES } from "./stats";
+import { ELEMENT_COUNT, ROLE_COUNT } from "./schema";
+import { TRAIT_RARITIES, defaultTraits, knownPositions } from "./tags";
 
 const LANGUAGE_NAMES: Record<string, string> = {
-  ko: 'Korean (한국어)',
-  en: 'English',
-  ja: 'Japanese (日本語)',
-  zh: 'Simplified Chinese (简体中文)',
-  'zh-tw': 'Traditional Chinese (繁體中文)',
-  es: 'Spanish',
-  fr: 'French',
-  de: 'German',
-  ru: 'Russian',
-  pt: 'Portuguese',
-  vi: 'Vietnamese',
-  th: 'Thai',
-  id: 'Indonesian',
+  ko: "Korean (한국어)",
+  en: "English",
+  ja: "Japanese (日本語)",
+  zh: "Simplified Chinese (简体中文)",
+  "zh-tw": "Traditional Chinese (繁體中文)",
+  es: "Spanish",
+  fr: "French",
+  de: "German",
+  ru: "Russian",
+  pt: "Portuguese",
+  vi: "Vietnamese",
+  th: "Thai",
+  id: "Indonesian",
 };
 
 export function languageName(code: string): string {
   const c = code.trim().toLowerCase();
-  return LANGUAGE_NAMES[c] ?? LANGUAGE_NAMES[c.split(/[-_]/)[0] ?? ''] ?? code;
+  return LANGUAGE_NAMES[c] ?? LANGUAGE_NAMES[c.split(/[-_]/)[0] ?? ""] ?? code;
 }
 
 const SYSTEM_BASE =
-  'You are the lead writer and game designer of an anime-style gacha game (think Arknights). ' +
-  'You design coherent worlds and memorable, visually distinct characters. ' +
-  'Always answer with a single JSON object only — no explanations, no markdown, no code fences.';
+  "You are the lead writer and game designer of an anime-style gacha game (think Arknights). " +
+  "You design coherent worlds and memorable, visually distinct characters. " +
+  "Always answer with a single JSON object only — no explanations, no markdown, no code fences.";
 
 function worldBlock(world: World): string {
-  const lines = [`World name: ${world.name || '(not decided yet)'}`, `World description:\n${world.description.trim() || '(none)'}`];
-  if (world.scenario.trim()) lines.push(`Starting scenario:\n${world.scenario.trim()}`);
-  if (world.directives.trim()) lines.push(`Author directives (follow them):\n${world.directives.trim()}`);
-  return lines.join('\n\n');
+  const lines = [
+    `World name: ${world.name || "(not decided yet)"}`,
+    `World description:\n${world.description.trim() || "(none)"}`,
+  ];
+  if (world.scenario.trim())
+    lines.push(`Starting scenario:\n${world.scenario.trim()}`);
+  if (world.directives.trim())
+    lines.push(`Author directives (follow them):\n${world.directives.trim()}`);
+  return lines.join("\n\n");
 }
 
 function catalogBlock(tags: TagCatalog): string {
   return [
     `- position (exactly one): ${tags.position[0]} = melee, ${tags.position[1]} = ranged`,
-    `- roles (1–2 of): ${tags.role.join(', ')}`,
-    `- element (exactly one): ${tags.element.join(', ')}`,
-  ].join('\n');
+    `- roles (1–2 of): ${tags.role.join(", ")}`,
+    `- element (exactly one): ${tags.element.join(", ")}`,
+  ].join("\n");
 }
 
 // ---------- 1. 세계 설정 ----------
@@ -54,14 +59,21 @@ export interface SetupPromptOptions {
   askArt: boolean;
 }
 
-export function setupMessages(world: World, opts: SetupPromptOptions): ChatMessage[] {
+export function setupMessages(
+  world: World,
+  opts: SetupPromptOptions,
+): ChatMessage[] {
   const lang = languageName(world.language);
   const fixedPositions = knownPositions(world.language);
   const traitsExample = defaultTraits(world.language);
 
   const fields: string[] = [];
-  if (opts.askName) fields.push(`  "name": string — a short, evocative name for this world`);
-  if (!fixedPositions) fields.push(`  "position": { "melee": string, "ranged": string } — the two words for melee / ranged fighters`);
+  if (opts.askName)
+    fields.push(`  "name": string — a short, evocative name for this world`);
+  if (!fixedPositions)
+    fields.push(
+      `  "position": { "melee": string, "ranged": string } — the two words for melee / ranged fighters`,
+    );
   fields.push(
     `  "roles": string[] — ${ROLE_COUNT.min}–${ROLE_COUNT.max} combat role names (e.g. damage dealer, defender, healer, support, crowd control, summoner, sniper, specialist). Short, clear words a player instantly understands; flavour them to the world only lightly.`,
     `  "elements": string[] — ${ELEMENT_COUNT.min}–${ELEMENT_COUNT.max} elements/affinities that fit this world (they need not be classic fire/water; e.g. a cyberpunk world might use voltage, toxin ...). One or two words each.`,
@@ -75,34 +87,36 @@ export function setupMessages(world: World, opts: SetupPromptOptions): ChatMessa
         `"negative": 5–15 English comma-separated tags to avoid (e.g. "lowres, bad anatomy, bad hands, text, watermark, ...").`,
     );
   }
-  fields.push(`  "standardBannerName": string — name of the always-open standard recruitment banner.`);
+  fields.push(
+    `  "standardBannerName": string — name of the always-open standard recruitment banner.`,
+  );
 
   const user = [
-    '[task: world-setup]',
+    "[task: world-setup]",
     worldBlock(world),
-    `Write all names and labels in ${lang}${opts.askArt ? ' (except artStyle, which must be English tags)' : ''}.`,
-    `Return one JSON object with these fields:\n{\n${fields.join(',\n')}\n}`,
-  ].join('\n\n');
+    `Write all names and labels in ${lang}${opts.askArt ? " (except artStyle, which must be English tags)" : ""}.`,
+    `Return one JSON object with these fields:\n{\n${fields.join(",\n")}\n}`,
+  ].join("\n\n");
 
   return [
-    { role: 'system', content: SYSTEM_BASE },
-    { role: 'user', content: user },
+    { role: "system", content: SYSTEM_BASE },
+    { role: "user", content: user },
   ];
 }
 
 // ---------- 2·3. 캐릭터 ----------
 
 const RARITY_FLAVOR: Record<Rarity, string> = {
-  6: 'top-tier legend of this world: iconic, central to the story, with a striking signature look and a dramatic past.',
-  5: 'notable elite: highly capable, with a clear specialty, strong personality and their own agenda.',
-  4: 'dependable regular: competent and likeable, with one memorable quirk.',
-  3: 'rookie or ordinary member: humble, simple, still charming and visually distinct.',
+  6: "top-tier legend of this world: iconic, central to the story, with a striking signature look and a dramatic past.",
+  5: "notable elite: highly capable, with a clear specialty, strong personality and their own agenda.",
+  4: "dependable regular: competent and likeable, with one memorable quirk.",
+  3: "rookie or ordinary member: humble, simple, still charming and visually distinct.",
 };
 
 export interface CharacterPromptOptions {
   rarity: Rarity;
   count: number;
-  detail: 'full' | 'light';
+  detail: "full" | "light";
   /** 같은 희귀도 안에서 몇 번째인지 (한 명씩 만들 때 1부터) */
   index?: number;
   /** 새 배너의 주제 (플레이어가 적은 글, 예: "여름 축제 한정"). 있으면 캐릭터를 이 주제에 맞춘다 */
@@ -112,36 +126,46 @@ export interface CharacterPromptOptions {
 /** 새 배너 주제 블록. 주제가 없으면 빈 글 */
 function themeBlock(brief: string | undefined, forWhat: string): string {
   const b = brief?.trim();
-  if (!b) return '';
+  if (!b) return "";
   return `Theme of the new recruitment banner (written by the player — follow it): ${b}\n${forWhat}`;
 }
 
 function castLine(c: Character): string {
-  const look = c.appearance.split(/(?<=[.!?。！？])\s+/)[0]?.slice(0, 100) ?? '';
-  const tags = c.imageTags.split(',').slice(0, 6).map((t) => t.trim()).join(', ');
-  return `- ${c.name} (${c.rarity}★, ${c.tags.position}, ${c.tags.role.join('/')}, ${c.tags.element}): ${look} [${tags}]`;
+  const look =
+    c.appearance.split(/(?<=[.!?。！？])\s+/)[0]?.slice(0, 100) ?? "";
+  const tags = c.imageTags
+    .split(",")
+    .slice(0, 6)
+    .map((t) => t.trim())
+    .join(", ");
+  return `- ${c.name} (${c.rarity}★, ${c.tags.position}, ${c.tags.role.join("/")}, ${c.tags.element}): ${look} [${tags}]`;
 }
 
 /** 아직 적게 쓰인 역할·속성·위치를 알려 주어 고르게 퍼지게 한다 */
 function balanceHint(cast: Character[], tags: TagCatalog): string {
   const count = (list: string[], pickFn: (c: Character) => string[]) => {
     const m = new Map(list.map((x) => [x, 0]));
-    for (const c of cast) for (const v of pickFn(c)) if (m.has(v)) m.set(v, m.get(v)! + 1);
+    for (const c of cast)
+      for (const v of pickFn(c)) if (m.has(v)) m.set(v, m.get(v)! + 1);
     const min = Math.min(...m.values());
     return [...m.entries()].filter(([, n]) => n === min).map(([k]) => k);
   };
-  if (cast.length === 0) return '';
+  if (cast.length === 0) return "";
   return (
-    `Under-used so far — prefer these when they fit: roles ${count(tags.role, (c) => c.tags.role).join(', ')}; ` +
-    `elements ${count(tags.element, (c) => [c.tags.element]).join(', ')}; position ${count(tags.position, (c) => [c.tags.position]).join(', ')}.`
+    `Under-used so far — prefer these when they fit: roles ${count(tags.role, (c) => c.tags.role).join(", ")}; ` +
+    `elements ${count(tags.element, (c) => [c.tags.element]).join(", ")}; position ${count(tags.position, (c) => [c.tags.position]).join(", ")}.`
   );
 }
 
-export function characterMessages(world: World, cast: Character[], opts: CharacterPromptOptions): ChatMessage[] {
+export function characterMessages(
+  world: World,
+  cast: Character[],
+  opts: CharacterPromptOptions,
+): ChatMessage[] {
   const lang = languageName(world.language);
   const { rarity, count, detail } = opts;
   const trait = world.tags.trait[TRAIT_RARITIES.indexOf(rarity)];
-  const full = detail === 'full';
+  const full = detail === "full";
 
   const lengths = full
     ? [
@@ -159,12 +183,12 @@ export function characterMessages(world: World, cast: Character[], opts: Charact
 
   const what =
     count === 1
-      ? `Create ONE new ${rarity}★ character${opts.index ? ` (${rarity}★ #${opts.index})` : ''}.`
+      ? `Create ONE new ${rarity}★ character${opts.index ? ` (${rarity}★ #${opts.index})` : ""}.`
       : `Create ${count} new ${rarity}★ characters in one go. They must clearly differ from each other in name, gender/age mix, role, element, position and silhouette.`;
 
   const castBlock = cast.length
-    ? `Existing cast (do NOT reuse these names; make the new character(s) clearly distinct in name, role, silhouette, hair colour/style and outfit):\n${cast.map(castLine).join('\n')}`
-    : 'Existing cast: none yet. This is the first character.';
+    ? `Existing cast (do NOT reuse these names; make the new character(s) clearly distinct in name, role, silhouette, hair colour/style and outfit):\n${cast.map(castLine).join("\n")}`
+    : "Existing cast: none yet. This is the first character.";
 
   const user = [
     `[task: characters rarity=${rarity} count=${count}]`,
@@ -174,25 +198,25 @@ export function characterMessages(world: World, cast: Character[], opts: Charact
     balanceHint(cast, world.tags),
     themeBlock(
       opts.brief,
-      'Design the new character(s) around this theme (look, outfit, story hook) while keeping them consistent with the world and the tag catalog.',
+      "Design the new character(s) around this theme (look, outfit, story hook) while keeping them consistent with the world and the tag catalog.",
     ),
-    `${what}\nRarity ${rarity}★${trait ? ` (rank label "${trait}")` : ''}: ${RARITY_FLAVOR[rarity]}`,
+    `${what}\nRarity ${rarity}★${trait ? ` (rank label "${trait}")` : ""}: ${RARITY_FLAVOR[rarity]}`,
     [
       `Field rules:`,
       `- Write name, appearance, personality, background and quotes in ${lang}.`,
       `- "position", "roles", "element": copy values exactly from the tag catalog.`,
-      `- "archetype": one of ${ARCHETYPES.join(', ')} — the combat archetype that best matches the roles.`,
+      `- "archetype": one of ${ARCHETYPES.join(", ")} — the combat archetype that best matches the roles.`,
       ...lengths.map((l) => `- ${l}`),
       `- "imageTags": ENGLISH danbooru-style tags, comma-separated, 10–25 tags, describing only PERMANENT visual traits: start with a subject count tag (1girl, 1boy or 1other), then hair colour/length/style, eye colour, body build/age look, signature outfit pieces, accessories/weapons. No pose, expression, camera, background or quality tags. Must match the appearance text.`,
-    ].join('\n'),
+    ].join("\n"),
     `Return JSON exactly in this shape:\n{"characters": [{"name": "", "position": "", "roles": [""], "element": "", "archetype": "", "appearance": "", "imageTags": "", "personality": "", "background": "", "quotes": [""]}]}\nThe array must contain exactly ${count} item(s).`,
   ]
     .filter(Boolean)
-    .join('\n\n');
+    .join("\n\n");
 
   return [
-    { role: 'system', content: SYSTEM_BASE },
-    { role: 'user', content: user },
+    { role: "system", content: SYSTEM_BASE },
+    { role: "user", content: user },
   ];
 }
 
@@ -202,30 +226,41 @@ export interface BannerMetaPromptOptions {
   brief?: string;
   /** 픽업 캐릭터 이름 (6★ 먼저) */
   featuredNames: string[];
-  kind?: 'standard' | 'limited';
+  kind?: "standard" | "limited";
 }
 
-export function bannerMetaMessages(world: World, opts: BannerMetaPromptOptions): ChatMessage[] {
+export function bannerMetaMessages(
+  world: World,
+  opts: BannerMetaPromptOptions,
+): ChatMessage[] {
   const lang = languageName(world.language);
-  const kind = opts.kind === 'standard' ? 'an always-open standard recruitment banner' : 'a limited-time recruitment banner';
+  const kind =
+    opts.kind === "standard"
+      ? "an always-open standard recruitment banner"
+      : "a limited-time recruitment banner";
   const user = [
-    '[task: banner-meta]',
+    "[task: banner-meta]",
     worldBlock(world),
     `We are opening ${kind} in this game.`,
-    opts.featuredNames.length ? `Featured (rate-up) characters: ${opts.featuredNames.join(', ')}` : 'No featured characters chosen yet.',
-    themeBlock(opts.brief, 'The banner name and description must reflect this theme.'),
+    opts.featuredNames.length
+      ? `Featured (rate-up) characters: ${opts.featuredNames.join(", ")}`
+      : "No featured characters chosen yet.",
+    themeBlock(
+      opts.brief,
+      "The banner name and description must reflect this theme.",
+    ),
     [
-      'Field rules:',
+      "Field rules:",
       `- Write in ${lang}.`,
       '- "name": a short, catchy banner title (2–6 words), like gacha games use. No quotes, no rarity stars, no dates.',
       '- "description": 1–2 short sentences inviting the player, hinting at the featured characters and the theme.',
-    ].join('\n'),
+    ].join("\n"),
     'Return JSON exactly in this shape:\n{"name": "", "description": ""}',
   ]
     .filter(Boolean)
-    .join('\n\n');
+    .join("\n\n");
   return [
-    { role: 'system', content: SYSTEM_BASE },
-    { role: 'user', content: user },
+    { role: "system", content: SYSTEM_BASE },
+    { role: "user", content: user },
   ];
 }
