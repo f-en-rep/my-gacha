@@ -1,21 +1,31 @@
 {
-  "name": "cardbridge",
-  "version": "0.1.0",
-  "description": "RisuAI card converter for SillyTavern and Marinara Engine",
-  "scripts": {
-    "build": "node build.mjs"
-  },
-  "license": "GPL-3.0",
+  "name": "my-gacha",
+  "version": "0.0.1",
+  "private": true,
+  "description": "AI가 세계관과 캐릭터를 만들어 주는 개인용 가챠 게임",
   "type": "module",
-  "devDependencies": {
-    "esbuild": "^0.25.10",
-    "typescript": "^5.9.3"
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p functions",
+    "test": "vitest run"
   },
   "dependencies": {
-    "@adobe/css-tools": "^4.4.4",
-    "dompurify": "^3.3.2",
-    "markdown-it": "^14.1.0",
-    "postcss-selector-parser": "^7.1.1",
-    "wasmoon": "^1.16.0"
+    "dexie": "^4.4.6",
+    "fflate": "^0.8.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260702.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "fake-indexeddb": "^6.2.6",
+    "typescript": "~5.9",
+    "vite": "^6.4.4",
+    "vitest": "^3.2.7"
   }
 }
