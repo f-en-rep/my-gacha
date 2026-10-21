@@ -562,7 +562,7 @@
 }
 
 .ch-send:hover:not(:disabled) {
-  background: #ffb800;
+  background: #e3b13f;
 }
 
 .ch-send:disabled {

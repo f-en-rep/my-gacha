@@ -285,21 +285,23 @@ textarea {
 
 .btn-primary {
   background: var(--ink);
+  border-color: var(--ink);
   color: var(--surface);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #000;
+  background: #151933;
 }
 
 .btn-accent {
   background: var(--accent);
-  border-color: var(--ink);
+  border-color: var(--accent);
   color: var(--ink);
+  box-shadow: var(--shadow-gold);
 }
 
 .btn-accent:hover:not(:disabled) {
-  background: #ffb800;
+  background: #e3b13f;
 }
 
 .btn-ghost {
@@ -1878,7 +1880,7 @@ body.panel-open {
 }
 
 .panel-close {
-  border-color: var(--ink);
+  border-radius: 50%;
 }
 
 .book {
