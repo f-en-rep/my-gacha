@@ -269,7 +269,7 @@
   gap: 12px;
 }
 .pl-detail-art {
-  aspect-ratio: 16 / 7;
+  aspect-ratio: 21 / 8;
   border: 1px solid var(--ink);
 }
 .pl-detail-title .kicker {
