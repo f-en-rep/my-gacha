@@ -369,8 +369,8 @@
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
-  height: min(78%, 760px);
+  bottom: 110px;
+  height: min(72%, 720px);
   display: flex;
   justify-content: center;
   align-items: flex-end;
@@ -410,8 +410,8 @@
   width: auto;
   max-width: 92%;
   height: auto;
-  max-height: 46%;
-  margin-bottom: 176px;
+  max-height: 52%;
+  margin-bottom: 60px;
   border: 1px solid var(--ink);
   box-shadow: 3px 3px 0 var(--ink);
 }
@@ -514,13 +514,13 @@
   white-space: pre-wrap;
 }
 
-.st-kind-narration .st-text {
+.st-box.st-kind-narration .st-text {
   color: var(--ink-2);
   font-size: 15px;
 }
 
-.st-kind-narration {
-  background: rgba(255, 255, 255, 0.94);
+.st-box.st-kind-narration {
+  background: #fbfaf6;
   border-color: var(--ink-2);
   box-shadow: 4px 4px 0 var(--ink-2);
 }
@@ -753,9 +753,6 @@
     padding-right: 12px;
   }
 
-  .st-cast {
-    height: 74%;
-  }
 
   .st-text {
     font-size: 15.5px;
@@ -788,12 +785,13 @@
   }
 
   .st-cast {
-    height: 100%;
+    bottom: 40px;
+    height: calc(100% - 48px);
   }
 
   .st-figure-img.card-art {
-    max-height: 52%;
-    margin-bottom: 118px;
+    max-height: 56%;
+    margin-bottom: 70px;
   }
 
   .st-figure {
@@ -831,9 +829,13 @@
     max-width: 360px;
   }
 
+  .st-cast {
+    bottom: 120px;
+  }
+
   .st-figure-img.card-art {
-    max-height: 46%;
-    margin-bottom: 220px;
+    max-height: 52%;
+    margin-bottom: 100px;
   }
 
   .st-log {
