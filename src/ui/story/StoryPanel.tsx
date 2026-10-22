@@ -2,12 +2,12 @@
 import { useEffect } from 'react';
 import { EmptyState } from '../common';
 import { Panel, PageHint } from '../panel/Panel';
-import { navigate, paths } from '../router';
+import { paths } from '../router';
 import { useSettings } from '../hooks';
-import { useActiveGame, useChapters, STORY_CLEAR_REWARD } from '../../game/store';
+import { useActiveGame, useBeats, useChapters, STORY_CLEAR_REWARD } from '../../game/store';
 import { BEATS_PER_CHAPTER } from '../../gen/story';
 import type { Chapter, Save, StoryProgress, World } from '../../types';
-import { cancelPlan, setFreshStart, startPlan, usePlanState } from './runner';
+import { cancelPlan, openChapter, startPlan, usePlanState } from './runner';
 import { Reader } from './Reader';
 import './story.css';
 
@@ -110,10 +110,21 @@ function ChapterList({
         ) : (
           <ol className="menu-list st-ch-list">
             {chapters.map((c) => {
-              const st = stateOf(save.story?.[c.id], c.nodes.length || BEATS_PER_CHAPTER);
+              const p = save.story?.[c.id];
+              const st = stateOf(p, c.nodes.length || BEATS_PER_CHAPTER);
+              const verb = st.tone === 'reading' ? '이어 읽기' : st.tone === 'done' ? '다시 읽기' : '읽기';
               return (
-                <li key={c.id}>
-                  <a className="menu-row st-ch-row" href={'#' + paths.chapter(c.id)} aria-current={c.id === selectedId ? 'true' : undefined}>
+                <li key={c.id} className={c.id === selectedId ? 'is-selected' : undefined}>
+                  {/* 이름을 누르면 바로 읽는다 ("이어 읽기"와 같다). 장면 목록은 "자세히"로 */}
+                  <a
+                    className="menu-row st-ch-row"
+                    href={'#' + paths.read(c.id)}
+                    onClick={(e) => {
+                      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                      e.preventDefault();
+                      openChapter(c.id, p);
+                    }}
+                  >
                     <span className="st-ch-no mono" aria-label={`${c.index}장`}>
                       No.{String(c.index).padStart(2, '0')}
                     </span>
@@ -121,6 +132,18 @@ function ChapterList({
                       <strong>{c.title}</strong>
                       <small className={'st-state st-state-' + st.tone}>{st.label}</small>
                     </span>
+                    <span className="st-ch-play">
+                      <span className="st-ch-play-text">{verb}</span>
+                      <span aria-hidden="true">▶</span>
+                    </span>
+                  </a>
+                  <a
+                    className="st-ch-more"
+                    href={'#' + paths.chapter(c.id)}
+                    aria-current={c.id === selectedId ? 'true' : undefined}
+                    aria-label={`${c.index}장 자세히`}
+                  >
+                    자세히
                   </a>
                 </li>
               );
@@ -183,12 +206,12 @@ function ChapterDetail({ chapter, save, world }: { chapter: Chapter; save: Save;
   const p = save.story?.[chapter.id];
   const cleared = !!p?.clearedAt;
   const total = chapter.nodes.length;
-  const reached = (i: number) => cleared || (!!p && i <= p.beat);
+  // 한 번이라도 닿은 장면은 계속 보인다: 다 읽음, 지금 위치까지, 또는 본문이 이미 쓰인 장면 ("처음부터"로 돌아가도 숨기지 않는다)
+  const written = useBeats(chapter.id);
+  const writtenSet = new Set((written ?? []).map((b) => b.index));
+  const reached = (i: number) => cleared || (!!p && i <= p.beat) || writtenSet.has(i);
 
-  const open = (fresh: boolean) => {
-    setFreshStart(fresh ? chapter.id : undefined);
-    navigate(paths.read(chapter.id));
-  };
+  const open = (fresh: boolean) => openChapter(chapter.id, p, fresh);
 
   return (
     <article className="st-detail">
