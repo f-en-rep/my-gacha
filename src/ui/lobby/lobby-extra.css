@@ -94,7 +94,20 @@
   cursor: pointer;
 }
 
+/* 기록: 폰은 HUD 아이콘(아래 독은 다섯 칸 그대로), 넓은 화면은 오른쪽 메뉴 */
+.lobby-menu .menu-archive {
+  display: none;
+}
+
 @media (min-width: 1000px) {
+  .lobby-menu .menu-archive {
+    display: flex;
+  }
+
+  .lobby-hud .hud-archive {
+    display: none;
+  }
+
   .hud-daily {
     height: 34px;
     padding: 0 14px;

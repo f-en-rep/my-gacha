@@ -4,10 +4,12 @@
 // - 프롬프트 = 연결의 메인 프롬프트 + 월드 화풍 + 장소 태그 + 배경 구도 태그 (항상 영어, 인물 없음)
 // - 캐릭터 슬롯 없음
 // - 같은 장소를 동시에 두 번 그리지 않는다 (inFlight)
+// - 실패하면 알림 (취소는 빼고). 배경은 읽는 중에 바로 보이므로 완료 알림은 없다
 import { db } from '../db';
 import { newId, now } from '../core/id';
 import { paintQueued, toImageError, toWebp } from '../gen/image';
 import { DEFAULT_NEGATIVE_TAGS, getImageProfile, joinTags } from './portraits';
+import { noticeFailure, resolveNotice } from './notices';
 import type { Asset, Id, ImageGenSettings, ImageProfile, Location, World } from '../types';
 
 export interface BackgroundPaintOptions {
@@ -55,7 +57,20 @@ export function isPaintingLocation(locationId: Id): boolean {
 export function paintLocation(locationId: Id, opts: BackgroundPaintOptions = {}): Promise<Id | undefined> {
   const running = inFlight.get(locationId);
   if (running) return running;
-  const p = doPaint(locationId, opts).finally(() => inFlight.delete(locationId));
+  const key = `location-art:${locationId}`;
+  const p = doPaint(locationId, opts)
+    .then(
+      async (id) => {
+        if (id) await resolveNotice(key);
+        return id;
+      },
+      async (e: unknown) => {
+        const l = await db.locations.get(locationId).catch(() => undefined);
+        await noticeFailure({ key, job: 'location-art', title: `「${l?.name ?? '장소'}」 배경을 그리지 못했어요`, link: '/story', worldId: l?.worldId }, e, opts.signal);
+        throw e;
+      },
+    )
+    .finally(() => inFlight.delete(locationId));
   inFlight.set(locationId, p);
   return p;
 }

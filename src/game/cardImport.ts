@@ -12,6 +12,7 @@ import { matchTag, sheetFromCard, traitForRarity, type CardSheet } from '../gen/
 import { exampleLines, fillUser, type ParsedCard } from '../import/card';
 import type { Asset, Character, Id, Rarity, TagCatalog, World } from '../types';
 import { detailFor, imageToAsset, statsFor } from './characters';
+import { addNotice, noticeFailure } from './notices';
 
 /** 팩 검사와 같은 한도 */
 const LIMIT = { text: 20000, quote: 300, ref: 4000 } as const;
@@ -158,8 +159,30 @@ export function characterFromCard(card: ParsedCard, sheet: CardSheet, world: Wor
   };
 }
 
-/** 카드 하나를 가져와 월드 캐스트에 넣는다 */
+/** 카드 하나를 가져와 월드 캐스트에 넣는다. 실패하거나 AI 정리를 못 하면 알림 */
 export async function importCard(worldId: Id, parsed: ParsedCard, fileName: string, opts: CardImportOptions): Promise<CardImportResult> {
+  const key = `card-import:${worldId}:${fileName}`;
+  try {
+    const r = await doImport(worldId, parsed, fileName, opts);
+    if (r.aiError) {
+      await addNotice({
+        key,
+        kind: 'info',
+        job: 'card-import',
+        title: `「${parsed.name}」 카드를 AI 없이 그대로 가져왔어요`,
+        detail: r.aiError,
+        link: `/characters/${encodeURIComponent(r.characterId)}`,
+        worldId,
+      });
+    }
+    return r;
+  } catch (e) {
+    await noticeFailure({ key, job: 'card-import', title: `「${parsed.name || fileName}」 카드를 가져오지 못했어요`, link: '/characters/import', worldId }, e, opts.signal);
+    throw e;
+  }
+}
+
+async function doImport(worldId: Id, parsed: ParsedCard, fileName: string, opts: CardImportOptions): Promise<CardImportResult> {
   const { signal } = opts;
   const world = await db.worlds.get(worldId);
   if (!world) throw new Error('월드를 찾을 수 없습니다.');

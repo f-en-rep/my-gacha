@@ -1,5 +1,8 @@
 // 아주 작은 해시 라우터. 로비는 늘 깔려 있고, 경로는 그 위에 열 패널을 정한다.
 import { useSyncExternalStore } from 'react';
+import type { LoreKind } from '../types';
+
+const LORE_KINDS: readonly string[] = ['event', 'person', 'item'];
 
 export type SettingsSub =
   | { kind: 'connection'; id: string }
@@ -16,6 +19,8 @@ export type Route =
   | { name: 'story'; chapterId?: string; read?: boolean }
   | { name: 'chat'; characterId?: string }
   | { name: 'shop' }
+  | { name: 'archive'; kind?: LoreKind; id?: string; mode?: 'new' | 'profile' }
+  | { name: 'notices' }
   | { name: 'settings'; sub?: SettingsSub };
 
 export type PanelName = Exclude<Route['name'], 'home'>;
@@ -32,6 +37,16 @@ export function parseHash(hash: string): Route {
       return b ? { name: 'chat', characterId: b } : { name: 'chat' };
     case 'shop':
       return { name: 'shop' };
+    case 'archive':
+      if (b === 'me') return { name: 'archive', mode: 'profile' };
+      if (b && LORE_KINDS.includes(b)) {
+        const kind = b as LoreKind;
+        if (c === 'new') return { name: 'archive', kind, mode: 'new' };
+        return c ? { name: 'archive', kind, id: c } : { name: 'archive', kind };
+      }
+      return { name: 'archive' };
+    case 'notices':
+      return { name: 'notices' };
     case 'story':
       if (b && c === 'read') return { name: 'story', chapterId: b, read: true };
       return b ? { name: 'story', chapterId: b } : { name: 'story' };
@@ -87,6 +102,12 @@ export const paths = {
   story: '/story',
   chat: (id?: string) => (id ? `/chat/${encodeURIComponent(id)}` : '/chat'),
   shop: '/shop',
+  archive: '/archive',
+  loreKind: (kind: LoreKind) => `/archive/${kind}`,
+  lore: (kind: LoreKind, id: string) => `/archive/${kind}/${encodeURIComponent(id)}`,
+  newLore: (kind: LoreKind) => `/archive/${kind}/new`,
+  playerProfile: '/archive/me',
+  notices: '/notices',
   chapter: (id: string) => `/story/${encodeURIComponent(id)}`,
   read: (id: string) => `/story/${encodeURIComponent(id)}/read`,
   settings: '/settings',

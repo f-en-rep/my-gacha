@@ -197,7 +197,7 @@ export function today(d = new Date()): string {
 
 /** 월드와 거기 딸린 모든 것(캐릭터, 배너, 그림, 세이브, 뽑기 기록) 지우기 */
 export async function deleteWorld(worldId: Id): Promise<void> {
-  await db.transaction('rw', [db.worlds, db.characters, db.banners, db.assets, db.saves, db.pulls, db.settings, db.chapters, db.beats, db.locations, db.chatLines], async () => {
+  await db.transaction('rw', [db.worlds, db.characters, db.banners, db.assets, db.saves, db.pulls, db.settings, db.chapters, db.beats, db.locations, db.chatLines, db.lore, db.notices], async () => {
     const saves = await db.saves.where('worldId').equals(worldId).primaryKeys();
     for (const sid of saves) {
       await db.pulls.where('saveId').equals(sid).delete();
@@ -209,6 +209,9 @@ export async function deleteWorld(worldId: Id): Promise<void> {
     await db.chapters.where('worldId').equals(worldId).delete();
     await db.beats.where('worldId').equals(worldId).delete();
     await db.locations.where('worldId').equals(worldId).delete();
+    await db.lore.where('worldId').equals(worldId).delete();
+    // 이 월드를 가리키는 알림은 갈 곳이 없어진다
+    await db.notices.where('worldId').equals(worldId).delete();
     await db.assets.where('worldId').equals(worldId).delete();
     await db.worlds.delete(worldId);
     const s = await getSettings();

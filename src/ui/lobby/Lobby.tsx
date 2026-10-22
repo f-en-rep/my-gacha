@@ -9,7 +9,9 @@ import { Portrait } from '../characters/Portrait';
 import { CARD_BACK_COMMON } from '../cards';
 import type { Character, Id, Save } from '../../types';
 import { useTypewriter } from './typewriter';
+import { useUnreadNotices } from '../../game/notices';
 import './lobby-extra.css';
+import '../notices/notices.css';
 
 /** 매일 보상 받기. 같은 날 두 번 받지 않게 저장된 세이브를 다시 읽고 고친다 */
 async function claimDaily(saveId: Id): Promise<void> {
@@ -48,6 +50,7 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
   const worlds = useWorlds();
   const generating = world?.status === 'generating' ? world : worlds?.find((w) => w.status === 'generating');
   const featured = pickFeatured(cast, save);
+  const unread = useUnreadNotices();
 
   const [quote, setQuote] = useState<{ id?: Id; i: number }>({ i: 0 });
   const quotes = featured?.quotes.filter((q) => q.trim()) ?? [];
@@ -160,6 +163,18 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
             </button>
           )}
         </div>
+        {/* 폰: 아래 독은 다섯 칸이라 기록은 여기 (넓은 화면은 오른쪽 메뉴에) */}
+        <a className="icon-btn hud-icon hud-archive" href={'#' + paths.archive} aria-label="기록">
+          <Icon name="notebook" size={20} />
+        </a>
+        <a className="icon-btn hud-icon hud-bell" href={'#' + paths.notices} aria-label={unread ? `알림, 안 읽은 것 ${unread}개` : '알림'}>
+          <Icon name="bell" size={20} />
+          {unread > 0 && (
+            <span className="hud-badge" aria-hidden="true">
+              {unread > 99 ? '99+' : unread}
+            </span>
+          )}
+        </a>
         <a className="icon-btn hud-settings" href={'#' + paths.settings} aria-label="설정">
           <Icon name="gear" size={20} />
         </a>
@@ -233,6 +248,7 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
         </a>
         <MenuItem href={paths.characters} icon="cards" label="캐릭터" kicker="OPERATORS" />
         <MenuItem href={paths.story} icon="book" label="스토리" kicker="STORY" />
+        <MenuItem href={paths.archive} icon="notebook" label="기록" kicker="ARCHIVE" className="menu-archive" />
         <MenuItem href={paths.chat()} icon="chat" label="대화" kicker="TALK" />
         <MenuItem href={paths.shop} icon="bag" label="상점" kicker="SHOP" />
         <MenuItem href={paths.world} icon="globe" label="월드" kicker="WORLD" className="menu-world" />

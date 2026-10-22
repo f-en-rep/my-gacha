@@ -5,6 +5,7 @@ import { exportBackup, exportWorldPack } from '../../pack';
 import { Toggle } from '../settings/fields';
 import { useSettings } from '../hooks';
 import { paths } from '../router';
+import { Icon } from '../Icon';
 import type { Rarity, Save, World } from '../../types';
 import { useRunState } from './runner';
 import { downloadBlob, errorText, formatDate, languageLabel, useCastCounts, worldName } from './shared';
@@ -76,6 +77,7 @@ export function WorldInfo({ world, save, active }: { world: World; save?: Save; 
         </p>
       </section>
 
+      <LockedNote />
       <TextBlock title="세계관" text={world.description} />
       {world.scenario && <TextBlock title="시나리오" text={world.scenario} />}
       {world.directives && <TextBlock title="작가 지시문" text={world.directives} />}
@@ -98,6 +100,25 @@ export function WorldInfo({ world, save, active }: { world: World; save?: Save; 
       )}
 
       <ExportSection world={world} />
+    </div>
+  );
+}
+
+/** 처음 만들 때 쓴 설정(세계관, 시나리오, 작가 지시문, 태그·화풍)은 고칠 수 없다는 안내와, 대신 고칠 수 있는 곳 */
+function LockedNote() {
+  return (
+    <div className="hint-box hint-strong wi-locked" role="note">
+      <strong>
+        <Icon name="lock" size={16} /> 처음 설정은 고칠 수 없어요
+      </strong>
+      <p className="small">
+        아래 세계관·시나리오·작가 지시문과 태그·화풍은 월드를 처음 만들 때 쓴 설정입니다. 캐릭터와 스토리, 기록이 모두 이 위에서 만들어져서 바꾸면 앞뒤가 맞지 않게 되므로 고칠
+        수 없습니다.
+      </p>
+      <p className="small wi-locked-links">
+        대신 고칠 수 있는 곳: <a href={'#' + paths.characters}>캐릭터 편집</a> · <a href={'#' + paths.archive}>기록</a> ·{' '}
+        <a href={'#' + paths.playerProfile}>내 프로필</a> · <a href={'#' + paths.prompts}>프롬프트</a>
+      </p>
     </div>
   );
 }

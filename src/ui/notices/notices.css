@@ -1,0 +1,277 @@
+/* 알림 패널, 탭·로비의 안 읽은 수, 로비 토스트 */
+
+.nt-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+
+.nt-empty {
+  margin-top: 12px;
+}
+
+.nt-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.nt-item {
+  display: flex;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.nt-item.is-fresh {
+  margin: 0 -10px;
+  padding: 14px 10px;
+  background: var(--accent-soft);
+  border-radius: var(--r);
+}
+
+.nt-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.nt-error .nt-mark {
+  border-color: var(--fail);
+  background: var(--fail-soft);
+  color: var(--fail);
+}
+
+.nt-done .nt-mark {
+  border-color: var(--ok);
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.nt-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.nt-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.nt-meta .mono {
+  font-size: 11px;
+}
+
+.nt-kind {
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.nt-error .nt-kind {
+  color: var(--fail);
+}
+
+.nt-done .nt-kind {
+  color: var(--ok);
+}
+
+.nt-count {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--sunken);
+  color: var(--ink-2);
+}
+
+.nt-new {
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.nt-title {
+  display: block;
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.nt-detail {
+  margin-top: 4px;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}
+
+.nt-error .nt-detail {
+  padding: 6px 10px;
+  border-left: 2px solid var(--fail);
+  background: var(--surface);
+}
+
+.nt-detail.is-clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.nt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin-top: 6px;
+}
+
+.nt-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.nt-link:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.nt-go {
+  color: var(--ink);
+}
+
+.nt-del {
+  margin-left: auto;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+
+.nt-what {
+  margin: 4px 0 8px;
+  padding-left: 18px;
+  color: var(--ink-2);
+}
+
+.nt-what li + li {
+  margin-top: 4px;
+}
+
+.nt-what b {
+  color: var(--ink);
+}
+
+.nt-unread {
+  color: var(--fail);
+  font-weight: 600;
+}
+
+/* 안 읽은 수: 패널 탭과 로비 종 */
+.tab-badge,
+.hud-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--fail);
+  color: var(--surface);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
+  writing-mode: horizontal-tb;
+}
+
+.book-tabs a {
+  position: relative;
+}
+
+.tab-badge {
+  position: absolute;
+  top: 4px;
+  right: 3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+}
+
+.hud-icon {
+  position: relative;
+}
+
+.hud-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  box-shadow: 0 0 0 2px var(--paper);
+}
+
+/* 로비: 새 실패 알림 토스트 */
+.nt-toast {
+  position: fixed;
+  left: 50%;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(calc(100vw - 32px), 440px);
+  padding: 10px 10px 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--fail);
+  border-left-width: 3px;
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  transform: translateX(-50%);
+  animation: fade 0.2s;
+}
+
+.nt-toast-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.nt-toast-text strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.nt-toast-text small {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.nt-toast .icon-btn {
+  width: 32px;
+  height: 32px;
+  border: 0;
+}

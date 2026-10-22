@@ -2,12 +2,17 @@
 //
 // - 챕터 계획: 구조화 연결. 장면 BEATS_PER_CHAPTER개(제목, 지시, 등장인물, 장소), 필요하면 새 장소
 // - 장면 본문: 문장 연결(없으면 구조화 연결). 같은 장면은 동시에 한 번만 쓴다 (inFlight)
-// - 챕터 마무리: 요약 + 장부 한 줄. 다음 계획과 장면 쓰기에 "지금까지의 이야기"로 들어간다
+// - 챕터 마무리: 요약 + 장부 한 줄 + 기록(사건·인물·물건). 요약은 다음 계획과 장면 쓰기에 "지금까지의 이야기"로 들어간다
+// - 기록의 인물·물건과 내 프로필(플레이 중인 세이브)은 계획·장면 쓰기에 짧게 들어간다 (비었으면 안 들어간다)
+// - 뒤에서 쓰다 실패하면 알림을 남긴다 (사용자가 멈춘 것은 빼고)
 import { db, getSettings } from '../../db';
 import { newId, now } from '../../core/id';
 import { generateJson } from '../text';
 import { resolveStructuredProfile } from '../world';
 import type { Beat, Chapter, Character, Id, Location, Segment, StoryNode, TextProfile } from '../../types';
+import { formatKnownLore, loreOf, mergeLore, type LoreDraft } from '../../game/lore';
+import { formatPlayer } from '../../game/player';
+import { noticeFailure, resolveNotice } from '../../game/notices';
 import { promptCtx } from '../prompts';
 import { beatMessages, finishMessages, formatStorySoFar, planMessages, segmentLine } from './prompts';
 import { beatSchema, finishSchema, matchName, normName, planSchema } from './schema';
@@ -76,6 +81,18 @@ export async function storySoFar(worldId: Id, beforeIndex: number, recent = 4): 
   return formatStorySoFar(list, recent);
 }
 
+/** 계획·장면 쓰기에 넣는 알려진 인물·물건 */
+async function knownLore(worldId: Id): Promise<string> {
+  return formatKnownLore(await loreOf(worldId));
+}
+
+/** 이 월드를 플레이 중인 세이브의 내 프로필 (다른 월드를 플레이 중이면 빈 글) */
+async function activePlayer(worldId: Id): Promise<string> {
+  const s = await getSettings();
+  const save = s.activeSaveId ? await db.saves.get(s.activeSaveId) : undefined;
+  return save?.worldId === worldId ? formatPlayer(save) : '';
+}
+
 function nameLookup(cast: Character[]): (s: Segment) => string {
   const byId = new Map(cast.map((c) => [c.id, c.name]));
   return (s) => (s.speakerId ? byId.get(s.speakerId) : undefined) ?? s.speakerName ?? '';
@@ -101,7 +118,10 @@ export async function planNextChapter(worldId: Id, opts: StoryGenOptions = {}): 
   const castNames = cast.map((c) => c.name);
   const { value } = await generateJson(
     profile,
-    planMessages({ world, cast, locations, chapterIndex, nodeCount: BEATS_PER_CHAPTER, storySoFar: formatStorySoFar(chapters, 4) }, await promptCtx('story-plan')),
+    planMessages(
+      { world, cast, locations, chapterIndex, nodeCount: BEATS_PER_CHAPTER, storySoFar: formatStorySoFar(chapters, 4), lore: await knownLore(worldId), player: await activePlayer(worldId) },
+      await promptCtx('story-plan'),
+    ),
     planSchema({ nodeCount: BEATS_PER_CHAPTER, castNames, locationNames: locations.map((l) => l.name), maxCastPerNode: MAX_CAST_PER_NODE }),
     { signal, maxTokens: profile.maxTokens ?? 8192, temperature: profile.temperature ?? 0.9 },
   );
@@ -239,9 +259,26 @@ export async function ensureBeat(chapterId: Id, index: number, opts: BeatOptions
 
   const controller = new AbortController();
   const flight: Flight = { controller, pinned: false, waiters: 0, promise: undefined as unknown as Promise<Beat> };
-  flight.promise = writeBeat(chapterId, index, controller.signal, opts.onProgress).finally(() => {
-    if (inFlight.get(key) === flight) inFlight.delete(key);
-  });
+  const noticeKey = `story-beat:${chapterId}#${index}`;
+  flight.promise = writeBeat(chapterId, index, controller.signal, opts.onProgress)
+    .then(
+      async (b) => {
+        await resolveNotice(noticeKey);
+        return b;
+      },
+      async (e: unknown) => {
+        const ch = await db.chapters.get(chapterId).catch(() => undefined);
+        await noticeFailure(
+          { key: noticeKey, job: 'story-beat', title: `${ch ? `${ch.index}장 ` : ''}${index + 1}번 장면을 쓰지 못했어요`, link: `/story/${encodeURIComponent(chapterId)}`, worldId: ch?.worldId },
+          e,
+          controller.signal,
+        );
+        throw e;
+      },
+    )
+    .finally(() => {
+      if (inFlight.get(key) === flight) inFlight.delete(key);
+    });
   flight.promise.catch(() => undefined); // 기다리는 쪽이 모두 빠져도 처리되지 않은 거절로 남지 않게
   inFlight.set(key, flight);
   return attach(flight, signal);
@@ -276,7 +313,20 @@ async function writeBeat(chapterId: Id, index: number, signal: AbortSignal, onPr
 
   const { value } = await generateJson(
     profile,
-    beatMessages({ world, chapter, index, cast: sceneCast, location, previousTail, storySoFar: await storySoFar(world.id, chapter.index, 2) }, await promptCtx('story-beat')),
+    beatMessages(
+      {
+        world,
+        chapter,
+        index,
+        cast: sceneCast,
+        location,
+        previousTail,
+        storySoFar: await storySoFar(world.id, chapter.index, 2),
+        lore: await knownLore(world.id),
+        player: await activePlayer(world.id),
+      },
+      await promptCtx('story-beat'),
+    ),
     beatSchema(),
     { signal, maxTokens: profile.maxTokens ?? 8192, temperature: profile.temperature ?? 0.9 },
   );
@@ -315,8 +365,24 @@ export function prefetchBeat(chapterId: Id, index: number): void {
 
 // ---------- 챕터 마무리 ----------
 
-/** 챕터를 다 읽은 뒤: 요약과 장부 한 줄을 만들고 status를 complete로 */
+/** 챕터를 다 읽은 뒤: 요약과 장부 한 줄, 기록(사건·인물·물건)을 만들고 status를 complete로. 실패하면 알림 */
 export async function finishChapter(chapterId: Id, opts: StoryGenOptions = {}): Promise<void> {
+  const key = `story-finish:${chapterId}`;
+  try {
+    await doFinish(chapterId, opts);
+    await resolveNotice(key);
+  } catch (e) {
+    const ch = await db.chapters.get(chapterId).catch(() => undefined);
+    await noticeFailure(
+      { key, job: 'story-finish', title: `${ch ? `${ch.index}장 ` : ''}챕터를 정리하지 못했어요 (요약·기록)`, link: `/story/${encodeURIComponent(chapterId)}`, worldId: ch?.worldId },
+      e,
+      opts.signal,
+    );
+    throw e;
+  }
+}
+
+async function doFinish(chapterId: Id, opts: StoryGenOptions): Promise<void> {
   const { signal, onProgress } = opts;
   const chapter = await loadChapter(chapterId);
   if (chapter.status === 'complete') return;
@@ -335,12 +401,27 @@ export async function finishChapter(chapterId: Id, opts: StoryGenOptions = {}): 
 
   const { value } = await generateJson(
     profile,
-    finishMessages({ world, chapter, scenes, storySoFar: await storySoFar(world.id, chapter.index, 2) }, await promptCtx('story-finish')),
+    finishMessages(
+      { world, chapter, scenes, storySoFar: await storySoFar(world.id, chapter.index, 2), castNames: cast.map((c) => c.name), known: await knownLore(world.id) },
+      await promptCtx('story-finish'),
+    ),
     finishSchema(),
     { signal, maxTokens: profile.maxTokens ?? 4096, temperature: profile.temperature ?? 0.5 },
   );
   signal?.throwIfAborted();
-  await db.chapters.update(chapterId, { summary: value.summary, ledger: value.ledger, status: 'complete', updatedAt: now() });
+  const drafts: LoreDraft[] = [
+    ...value.events.map((l) => ({ kind: 'event' as const, ...l })),
+    ...value.people.map((l) => ({ kind: 'person' as const, ...l })),
+    ...value.items.map((l) => ({ kind: 'item' as const, ...l })),
+  ];
+  await db.transaction('rw', db.chapters, db.lore, async () => {
+    // 다른 탭이 먼저 마쳤으면 기록을 두 번 넣지 않는다
+    const cur = await db.chapters.get(chapterId);
+    if (!cur || cur.status === 'complete') return;
+    await db.chapters.update(chapterId, { summary: value.summary, ledger: value.ledger, status: 'complete', updatedAt: now() });
+    const changed = mergeLore(await loreOf(world.id), drafts, { worldId: world.id, chapterId, chapterIndex: chapter.index, cast });
+    if (changed.length) await db.lore.bulkPut(changed);
+  });
 }
 
 /** 장면 대본이 너무 길면 앞뒤를 남기고 가운데를 줄인다 */

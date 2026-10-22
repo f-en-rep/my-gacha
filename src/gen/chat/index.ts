@@ -12,6 +12,7 @@ import { chatComplete, describeTextError } from '../text';
 import { formatStorySoFar, resolveProseProfile } from '../story';
 import type { ChatLine, Character, Id, Save, TextProfile, World } from '../../types';
 import { promptCtx } from '../prompts';
+import { formatPlayer } from '../../game/player';
 import { HISTORY_LINES, chatMessages, cleanReply } from './prompts';
 
 export { HISTORY_LINES, chatMessages, chatSystemPrompt, cleanReply, historyMessages, neutralYou } from './prompts';
@@ -81,6 +82,7 @@ async function writeReply(ctx: Ctx, history: ChatLine[], signal?: AbortSignal): 
         world: ctx.world,
         character: ctx.character,
         playerName: ctx.save.playerName,
+        player: formatPlayer(ctx.save, { name: false }),
         stance: bondStance(level),
         level,
         storySoFar: await recentStory(ctx.save),

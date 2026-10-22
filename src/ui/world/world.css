@@ -505,3 +505,19 @@
     grid-row: 1 / span 2;
   }
 }
+
+/* 처음 설정은 고칠 수 없다는 안내 */
+.hint-box.wi-locked strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wi-locked p + p {
+  margin-top: 6px;
+}
+
+.wi-locked-links a {
+  color: var(--ink);
+  font-weight: 600;
+}

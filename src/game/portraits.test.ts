@@ -159,6 +159,31 @@ describe('paintPortrait', () => {
     expect(await paintPortrait('c1')).toBeDefined();
   });
 
+  it('알림: 실패는 한 줄로 쌓이고, 뒤에서 다 그리면 완료 알림 (앞에서 그린 것과 취소는 없음)', async () => {
+    await db.notices.clear();
+    paint.mockRejectedValue(new Error('boom'));
+    await expect(paintPortrait('c1')).rejects.toThrow();
+    await expect(paintPortrait('c1', { priority: 'foreground' })).rejects.toThrow();
+    let list = await db.notices.toArray();
+    expect(list).toMatchObject([{ kind: 'error', job: 'portrait', count: 2, title: '아린의 초상화를 그리지 못했어요', detail: 'NovelAI: boom', link: '/characters/c1' }]);
+
+    const ctrl = new AbortController();
+    paint.mockImplementation(async () => {
+      ctrl.abort();
+      throw new Error('aborted');
+    });
+    await expect(paintPortrait('c1', { signal: ctrl.signal })).rejects.toThrow();
+    expect(await db.notices.count()).toBe(1);
+
+    paint.mockResolvedValue(fakeResult());
+    await paintPortrait('c1', { priority: 'foreground', force: true });
+    list = await db.notices.toArray();
+    expect(list).toHaveLength(1);
+    expect(list[0]!.readAt).toBeTruthy(); // 다시 해서 됐으니 실패 알림은 읽음
+    await paintPortrait('c1', { force: true });
+    expect((await db.notices.toArray()).filter((n) => n.kind === 'done')).toMatchObject([{ title: '아린의 초상화를 그렸어요' }]);
+  });
+
   it('없는 캐릭터', async () => {
     await expect(paintPortrait('nope')).rejects.toThrow('캐릭터를 찾을 수 없습니다');
   });

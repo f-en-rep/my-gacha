@@ -38,6 +38,8 @@ export const manifestSchema = z.object({
       chapters: z.number().int().nonnegative(),
       beats: z.number().int().nonnegative(),
       locations: z.number().int().nonnegative(),
+      /** 기록 (예전 팩에는 없다) */
+      lore: z.number().int().nonnegative().optional(),
     })
     .optional(),
 });
@@ -144,6 +146,9 @@ export const saveSchema = z.object({
     )
     .optional(),
   playerName: text(200).optional(),
+  player: z
+    .object({ profile: text(600).optional(), appearance: text(600).optional(), imageTags: text(400).optional() })
+    .optional(),
   createdAt: iso,
   updatedAt: iso,
 });
@@ -219,4 +224,20 @@ export const beatSchema = z.object({
   index: z.number().int().nonnegative().max(100000),
   segments: z.array(segmentSchema).max(5000),
   createdAt: iso,
+});
+
+// ── 기록 (story/lore/ 아래, 스토리와 함께) ──
+
+export const loreSchema = z.object({
+  id,
+  worldId: z.string().optional(),
+  kind: z.enum(['event', 'person', 'item']),
+  name: text(200),
+  summary: text(4000),
+  chapterId: id.optional(),
+  chapterIndex: z.number().int().nonnegative().max(100000).optional(),
+  castIds: z.array(id).max(200).optional(),
+  source: z.enum(['story', 'manual']),
+  createdAt: iso,
+  updatedAt: iso,
 });

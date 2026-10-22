@@ -4,6 +4,7 @@ import { db } from '../../db';
 import { newId, now } from '../../core/id';
 import { isPaintingBanner, paintBannerArt } from '../../game/bannerArt';
 import { usePaintAvailable } from '../../game/portraits';
+import { noticeFailure } from '../../game/notices';
 import { generateBannerMeta, generateCharacters } from '../../gen/world';
 import { describeTextError } from '../../gen/text';
 import type { Banner, BannerKind, Character, Id, Rarity, World } from '../../types';
@@ -386,6 +387,7 @@ export function BannerEditor({
       });
     } catch (e) {
       setNameError(describeTextError(e));
+      void noticeFailure({ key: `banner:${world.id}`, job: 'banner', title: '배너 이름을 짓지 못했어요', link: paths.newBanner, worldId: world.id }, new Error(describeTextError(e)));
     } finally {
       setNaming(false);
     }
@@ -425,7 +427,10 @@ export function BannerEditor({
       setGenNote(`새 캐릭터 ${total}명을 만들어 픽업에 넣었습니다.`);
     } catch (e) {
       if (ctrl.signal.aborted) setGenNote('멈췄습니다. 그때까지 만든 캐릭터는 남아 있습니다.');
-      else setGenError(describeTextError(e));
+      else {
+        setGenError(describeTextError(e));
+        void noticeFailure({ key: `characters:${world.id}`, job: 'characters', title: '배너용 새 캐릭터를 만들지 못했어요', link: paths.pull, worldId: world.id }, new Error(describeTextError(e)));
+      }
     } finally {
       // 실패·취소해도 그때까지 만든 캐릭터는 픽업에 넣는다
       const made = (await db.characters.where('worldId').equals(world.id).toArray()).filter((c) => !before.has(c.id)).sort((a, b) => a.createdAt.localeCompare(b.createdAt));

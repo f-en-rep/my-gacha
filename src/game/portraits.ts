@@ -6,11 +6,13 @@
 //   슬롯이 없는 모델은 공통 프롬프트 뒤에 이어 붙는다 (gen/image가 처리)
 // - 연결별 큐(한 번에 하나, 최소 간격)는 paintQueued가 지킨다
 // - 같은 캐릭터를 동시에 두 번 그리지 않는다 (inFlight)
+// - 실패하면 알림. 뒤에서(background) 그린 것은 다 그렸을 때도 알림 (취소는 빼고)
 import { db, getSettings } from '../db';
 import { newId, now } from '../core/id';
 import { paintQueued, toImageError, toWebp } from '../gen/image';
 import { useLiveQuery } from '../ui/hooks';
 import type { CharacterPrompt } from '../gen/image/types';
+import { addNotice, noticeFailure, resolveNotice } from './notices';
 import type { Asset, Character, Id, ImageGenSettings, ImageProfile, World } from '../types';
 
 export interface PaintOptions {
@@ -98,9 +100,32 @@ export function isPainting(characterId: Id): boolean {
 export function paintPortrait(characterId: Id, opts: PaintOptions = {}): Promise<Id | undefined> {
   const running = inFlight.get(characterId);
   if (running) return running;
-  const p = doPaint(characterId, opts).finally(() => inFlight.delete(characterId));
+  const p = withNotice(characterId, opts, () => doPaint(characterId, opts)).finally(() => inFlight.delete(characterId));
   inFlight.set(characterId, p);
   return p;
+}
+
+/** 그린 결과를 알림으로 (실패는 언제나, 완료는 뒤에서 새로 그렸을 때만) */
+async function withNotice(characterId: Id, opts: PaintOptions, job: () => Promise<Id | undefined>): Promise<Id | undefined> {
+  const key = `portrait:${characterId}`;
+  const before = opts.force ? undefined : (await db.characters.get(characterId).catch(() => undefined))?.portraitId;
+  try {
+    const id = await job();
+    if (id) await resolveNotice(key);
+    if (id && id !== before && (opts.priority ?? 'background') === 'background') {
+      const c = await db.characters.get(characterId);
+      if (c) await addNotice({ key, kind: 'done', job: 'portrait', title: `${c.name}의 초상화를 그렸어요`, link: `/characters/${encodeURIComponent(c.id)}`, worldId: c.worldId });
+    }
+    return id;
+  } catch (e) {
+    const c = await db.characters.get(characterId).catch(() => undefined);
+    await noticeFailure(
+      { key, job: 'portrait', title: `${c?.name ?? '캐릭터'}의 초상화를 그리지 못했어요`, link: `/characters/${encodeURIComponent(characterId)}`, worldId: c?.worldId },
+      e,
+      opts.signal,
+    );
+    throw e;
+  }
 }
 
 async function existingPortrait(c: Character): Promise<Id | undefined> {

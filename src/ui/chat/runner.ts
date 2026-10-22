@@ -2,6 +2,8 @@
 import { useSyncExternalStore } from 'react';
 import { isReplying, regenerateLast, retryLast, sendChat } from '../../gen/chat';
 import type { Id } from '../../types';
+import { db } from '../../db';
+import { noticeFailure, resolveNotice } from '../../game/notices';
 
 export type ChatJob = 'send' | 'retry' | 'regenerate';
 
@@ -52,9 +54,16 @@ async function run(saveId: Id, characterId: Id, job: ChatJob, fn: () => Promise<
   try {
     await fn();
     set(key, IDLE);
+    void resolveNotice(`chat:${saveId}:${characterId}`);
     return true;
   } catch (e) {
-    set(key, { replying: false, error: chatErrorText(e), failed: job });
+    const text = chatErrorText(e);
+    set(key, { replying: false, error: text, failed: job });
+    const c = await db.characters.get(characterId).catch(() => undefined);
+    await noticeFailure(
+      { key: `chat:${saveId}:${characterId}`, job: 'chat', title: `${c?.name ?? '캐릭터'}의 답을 받지 못했어요`, link: `/chat/${encodeURIComponent(characterId)}`, worldId: c?.worldId },
+      new Error(text, { cause: e }),
+    );
     return false;
   }
 }

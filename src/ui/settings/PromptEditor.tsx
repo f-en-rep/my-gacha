@@ -25,7 +25,9 @@ async function loadPreviewData(): Promise<PreviewData> {
   const save = s.activeSaveId ? await db.saves.get(s.activeSaveId) : undefined;
   const lead = cast[0]!;
   const lines = save ? await db.chatLines.where('[saveId+characterId]').equals([save.id, lead.id]).sortBy('id') : [];
-  return { world, cast, chapters, locations, history: lines.length ? lines : SAMPLE_CHAT, playerName: save?.playerName, sample: false };
+  const lore = await db.lore.where('worldId').equals(world.id).toArray();
+  const mine = save?.worldId === world.id ? save : undefined;
+  return { world, cast, chapters, locations, history: lines.length ? lines : SAMPLE_CHAT, playerName: save?.playerName, player: mine?.player, lore, sample: false };
 }
 
 function initialDrafts(tpl: PromptTemplate, saved: SectionOverrides | undefined): SectionOverrides {
