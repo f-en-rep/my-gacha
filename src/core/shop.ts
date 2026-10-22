@@ -96,6 +96,6 @@ export const SHOP_ERROR_TEXT: Record<ShopError, string> = {
   insufficient: '상점 재화가 부족합니다.',
   'not-owned': '보유하지 않은 캐릭터입니다.',
   'already-owned': '이미 보유한 캐릭터입니다.',
-  'max-potential': '잠재가 이미 최대입니다.',
+  'max-potential': '공명이 이미 최대입니다.',
   'bad-amount': '수량이 올바르지 않습니다.',
 };

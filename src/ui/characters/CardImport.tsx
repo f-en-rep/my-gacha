@@ -199,7 +199,7 @@ export function CardImport({ world, save }: { world: World; save?: Save }) {
           </div>
           <p className="field-hint">고른 카드 모두에 같은 희귀도를 줍니다. 나중에 캐릭터마다 고칠 수 있습니다.</p>
         </div>
-        {save && <Toggle checked={own} onChange={setOwn} label="바로 보유" hint="뽑지 않아도 보유한 캐릭터로 넣습니다 (잠재 1). 끄면 뽑기에서 만나야 합니다." />}
+        {save && <Toggle checked={own} onChange={setOwn} label="바로 보유" hint="뽑지 않아도 보유한 캐릭터로 넣습니다 (공명 0). 끄면 뽑기에서 만나야 합니다." />}
       </section>
 
       <div className="form-actions ce-actions">

@@ -113,7 +113,7 @@ export async function setStoryProgress(saveId: Id, chapterId: Id, beat: number, 
     const s = await db.saves.get(saveId);
     if (!s) return;
     const prev: StoryProgress | undefined = s.story?.[chapterId];
-    const next: StoryProgress = { ...prev, beat, segment };
+    const next: StoryProgress = { ...prev, beat, segment, furthest: Math.max(beat, prev?.furthest ?? prev?.beat ?? 0) };
     await db.saves.put({ ...s, story: { ...s.story, [chapterId]: next }, updatedAt: now() });
   });
 }
@@ -125,7 +125,7 @@ export async function clearChapter(saveId: Id, chapterId: Id): Promise<boolean> 
     if (!s) return false;
     const prev = s.story?.[chapterId];
     if (prev?.clearedAt) return false;
-    const next: StoryProgress = { beat: prev?.beat ?? 0, segment: prev?.segment ?? 0, clearedAt: now() };
+    const next: StoryProgress = { ...prev, beat: prev?.beat ?? 0, segment: prev?.segment ?? 0, clearedAt: now() };
     await db.saves.put({
       ...s,
       wallet: { ...s.wallet, pull: s.wallet.pull + STORY_CLEAR_REWARD },

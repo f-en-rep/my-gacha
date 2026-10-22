@@ -1241,9 +1241,10 @@ body.panel-open {
 .sky-orbits {
   position: absolute;
   left: 50%;
-  top: 46%;
+  top: 50%;
   width: min(150vw, 1100px);
   height: min(150vw, 1100px);
+  pointer-events: none;
   transform: translate(-50%, -50%);
   fill: none;
   stroke: var(--gold);
@@ -1361,8 +1362,10 @@ body.panel-open {
 }
 
 .lobby-stage {
-  display: grid;
-  place-items: center;
+  /* flex여야 아치의 height: 100%가 이 칸 높이를 따른다 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-height: 0;
 }
 
@@ -1465,6 +1468,8 @@ body.panel-open {
 .lobby-dialog p {
   font-size: 14px;
   line-height: 1.65;
+  /* 짧은 대사·긴 대사가 바뀌어도 상자 높이가 덜 흔들리게 두 줄은 늘 잡아 둔다 */
+  min-height: calc(1.65em * 2);
 }
 
 .lobby-dialog a {
@@ -1606,17 +1611,16 @@ body.panel-open {
   .lobby {
     grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
     grid-template-rows: auto minmax(0, 1fr) auto;
-    column-gap: 56px;
+    column-gap: 72px;
     row-gap: 18px;
-    padding: 22px 52px 40px;
-    background: radial-gradient(90% 80% at 32% 10%, var(--sky) 0%, transparent 65%), var(--paper);
+    /* 아주 넓은 화면에서는 가운데로 모은다 */
+    padding: 22px max(52px, calc((100vw - 1440px) / 2)) 36px;
+    background: radial-gradient(70% 80% at 40% 10%, var(--sky) 0%, transparent 65%), var(--paper);
   }
 
   .sky-orbits {
-    left: 33%;
-    top: 50%;
-    width: min(92vh, 980px);
-    height: min(92vh, 980px);
+    width: min(100vh, 1040px);
+    height: min(100vh, 1040px);
   }
 
   .lobby-hud {
@@ -1655,7 +1659,7 @@ body.panel-open {
   }
 
   .stage-arch {
-    max-height: 640px;
+    max-height: 760px;
   }
 
   .lobby-dialog {
