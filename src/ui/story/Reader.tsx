@@ -8,16 +8,14 @@ import type { Beat, Chapter, Character, Id, Location, Save, Segment, World } fro
 import { Portrait } from '../characters/Portrait';
 import { Icon } from '../Icon';
 import { navigate, paths } from '../router';
-import { useTypewriter } from '../lobby/typewriter';
-import { isFreshStart, setFreshStart } from './runner';
+import { autoDelayMs, isFreshStart, loadAutoSpeed, nextAutoSpeed, saveAutoSpeed, setFreshStart, speedLabel, type AutoSpeed } from './runner';
 
 type Phase = 'loading' | 'error' | 'reading' | 'complete';
 
 /** 등장인물은 몇 명까지만 세운다 */
 const MAX_CAST = 3;
-/** 자동 넘기기: 다 찍은 뒤 기다리는 시간 */
-const AUTO_PAUSE_MS = 1500;
-const AUTO_PER_CHAR_MS = 25;
+/** 한 글자 찍는 시간 (자동이면 속도로 나눈다) */
+const MS_PER_CHAR = 38;
 /** 이미 쓰인 장면이면 로딩 화면을 번쩍 보이지 않게 */
 const LOADING_DELAY_MS = 250;
 
@@ -37,6 +35,32 @@ function speakerOf(seg: Segment, byId: Map<Id, Character>): string | undefined {
 }
 
 const EMPTY_SEGMENTS: Segment[] = [{ kind: 'narration', text: '……' }];
+
+function reducedMotion(): boolean {
+  try {
+    return matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
+
+/** 로비 타자기와 같지만 속도를 바꿀 수 있다 (자동 넘기기 배속) */
+function useTypewriter(text: string, msPerChar: number): { shown: string; typing: boolean; finish: () => void } {
+  const chars = Array.from(text); // 한글·이모지가 반쪽으로 잘리지 않게 글자 단위로
+  const [n, setN] = useState(() => (reducedMotion() ? chars.length : 0));
+
+  useEffect(() => {
+    setN(reducedMotion() ? Array.from(text).length : 0);
+  }, [text]);
+
+  useEffect(() => {
+    if (n >= chars.length) return;
+    const t = window.setTimeout(() => setN((x) => x + 1), msPerChar);
+    return () => window.clearTimeout(t);
+  }, [n, chars.length, msPerChar]);
+
+  return { shown: chars.slice(0, n).join(''), typing: n < chars.length, finish: () => setN(chars.length) };
+}
 
 export function Reader({ chapter, world, save }: { chapter: Chapter; world: World; save: Save }) {
   const total = chapter.nodes.length;
@@ -61,11 +85,15 @@ export function Reader({ chapter, world, save }: { chapter: Chapter; world: Worl
   const [elapsed, setElapsed] = useState(0);
   const [titleCard, setTitleCard] = useState<number | undefined>();
   const [auto, setAuto] = useState(false);
+  const [speed, setSpeed] = useState<AutoSpeed>(() => loadAutoSpeed());
   const [logOpen, setLogOpen] = useState(false);
+  /** 장면 끝: "이어보기 / 취소"를 묻는 중 */
+  const [sceneEnd, setSceneEnd] = useState(false);
   const [reward, setReward] = useState<boolean | undefined>();
 
   const rootRef = useRef<HTMLDivElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
+  const choiceRef = useRef<HTMLDivElement>(null);
   const posRef = useRef(pos);
   posRef.current = pos;
 
@@ -74,7 +102,7 @@ export function Reader({ chapter, world, save }: { chapter: Chapter; world: Worl
   const segments = beat ? (beat.segments.length ? beat.segments : EMPTY_SEGMENTS) : undefined;
   const seg = phase === 'reading' && segments ? segments[Math.min(pos.segment, segments.length - 1)] : undefined;
   const text = seg ? displayText(seg) : '';
-  const typed = useTypewriter(text);
+  const typed = useTypewriter(text, auto ? MS_PER_CHAR / speed : MS_PER_CHAR);
   const speaker = seg ? speakerOf(seg, byId) : undefined;
 
   // ── 장면 본문 받기 ──
@@ -159,7 +187,7 @@ export function Reader({ chapter, world, save }: { chapter: Chapter; world: Worl
   }, [save.id, chapter.id, chapter.status]);
 
   const advance = useCallback(() => {
-    if (phase !== 'reading' || !segments) return;
+    if (phase !== 'reading' || !segments || sceneEnd) return;
     if (typed.typing) {
       typed.finish();
       return;
@@ -167,34 +195,52 @@ export function Reader({ chapter, world, save }: { chapter: Chapter; world: Worl
     if (pos.segment + 1 < segments.length) {
       setPos({ beat: pos.beat, segment: pos.segment + 1 });
     } else if (pos.beat + 1 < total) {
-      setPos({ beat: pos.beat + 1, segment: 0 });
-      setPhase('loading');
+      // 장면 끝: 바로 넘기지 않고 묻는다. 그동안 다음 장면을 미리 받아 둔다
+      setSceneEnd(true);
+      prefetchBeat(chapter.id, pos.beat + 1);
     } else {
       void complete();
     }
-  }, [phase, segments, typed, pos, total, complete]);
+  }, [phase, segments, sceneEnd, typed, pos, total, complete, chapter.id]);
+
+  const continueScene = useCallback(() => {
+    setSceneEnd(false);
+    setPos((p) => ({ beat: p.beat + 1, segment: 0 }));
+    setPhase('loading');
+    rootRef.current?.focus();
+  }, []);
 
   const skipScene = () => {
-    if (phase !== 'reading' || !segments) return;
+    if (phase !== 'reading' || !segments || sceneEnd) return;
     if (pos.segment < segments.length - 1) setPos({ beat: pos.beat, segment: segments.length - 1 });
     else typed.finish();
-    // 버튼에 포커스가 남으면 다음 Enter가 또 "장면 넘기기"를 누른다: 읽기 화면으로 돌려 둔다
+    // 버튼에 포커스가 남으면 다음 Enter가 또 Skip을 누른다: 읽기 화면으로 돌려 둔다
     rootRef.current?.focus();
   };
 
-  // 자동 넘기기
+  const cycleSpeed = () => {
+    const v = nextAutoSpeed(speed);
+    setSpeed(v);
+    saveAutoSpeed(v);
+  };
+
+  // 자동 넘기기 (장면 끝의 선택에서는 멈춘다)
   useEffect(() => {
-    if (!auto || phase !== 'reading' || logOpen || typed.typing) return;
-    const t = window.setTimeout(advance, AUTO_PAUSE_MS + Math.min(Array.from(text).length, 80) * AUTO_PER_CHAR_MS);
+    if (!auto || phase !== 'reading' || logOpen || sceneEnd || typed.typing) return;
+    const t = window.setTimeout(advance, autoDelayMs(Array.from(text).length, speed));
     return () => window.clearTimeout(t);
-  }, [auto, phase, logOpen, typed.typing, advance, text]);
+  }, [auto, phase, logOpen, sceneEnd, typed.typing, advance, text, speed]);
 
   const close = useCallback(() => {
     const p = posRef.current;
-    if (phase !== 'complete') void setStoryProgress(save.id, chapter.id, p.beat, p.segment);
+    // 장면 끝에서 닫으면 다음 장면부터 이어 읽는다
+    if (phase !== 'complete') {
+      if (sceneEnd) void setStoryProgress(save.id, chapter.id, p.beat + 1, 0);
+      else void setStoryProgress(save.id, chapter.id, p.beat, p.segment);
+    }
     setFreshStart(undefined);
     navigate(paths.chapter(chapter.id));
-  }, [phase, save.id, chapter.id]);
+  }, [phase, sceneEnd, save.id, chapter.id]);
 
   // ── 포커스 ──
   useEffect(() => {
@@ -211,17 +257,24 @@ export function Reader({ chapter, world, save }: { chapter: Chapter; world: Worl
     }
   }, [logOpen]);
 
+  useEffect(() => {
+    if (sceneEnd && !logOpen) choiceRef.current?.querySelector<HTMLElement>('.st-choice-go')?.focus();
+  }, [sceneEnd, logOpen]);
+
+  const closeLog = () => {
+    setLogOpen(false);
+    rootRef.current?.focus();
+  };
+
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Escape') {
       e.preventDefault();
-      if (logOpen) {
-        setLogOpen(false);
-        rootRef.current?.focus();
-      } else close();
+      if (logOpen) closeLog();
+      else close(); // 장면 끝의 선택에서는 "취소"
       return;
     }
     if (e.key === 'Tab') {
-      const scope = logOpen ? logRef.current : rootRef.current;
+      const scope = logOpen ? logRef.current : sceneEnd ? choiceRef.current : rootRef.current;
       if (!scope) return;
       const focusables = Array.from(scope.querySelectorAll<HTMLElement>('button:not([disabled]), a[href]')).filter((el) => el.offsetParent !== null);
       const first = focusables[0];
@@ -239,9 +292,17 @@ export function Reader({ chapter, world, save }: { chapter: Chapter; world: Worl
     }
     if ((e.key === ' ' || e.key === 'Enter') && !logOpen) {
       const t = e.target as HTMLElement;
-      if (t.closest('button, a')) return; // 버튼은 버튼대로
+      // 장면 끝의 선택은 keydown에서 바로 처리한다 (Space를 뗄 때 엉뚱한 버튼이 눌리지 않게)
+      if (sceneEnd && t.closest('.st-choice-cancel')) {
+        e.preventDefault();
+        if (!e.repeat) close();
+        return;
+      }
+      if (t.closest('button, a') && !(sceneEnd && t.closest('.st-choice-go'))) return; // 버튼은 버튼대로
       e.preventDefault();
-      if (!e.repeat) advance();
+      if (e.repeat) return;
+      if (sceneEnd) continueScene();
+      else advance();
     }
   };
 
@@ -283,10 +344,7 @@ export function Reader({ chapter, world, save }: { chapter: Chapter; world: Worl
         {bgUrl ? (
           <img key={bgUrl} src={bgUrl} alt="" draggable={false} />
         ) : (
-          <div className="st-bg-blank">
-            <span className="st-bg-kicker mono">LOCATION</span>
-            <span className="st-bg-name">{location?.name ?? '…'}</span>
-          </div>
+          <div className="st-bg-blank" />
         )}
       </div>
 
@@ -301,11 +359,23 @@ export function Reader({ chapter, world, save }: { chapter: Chapter; world: Worl
           <button type="button" className="st-ctl" onClick={() => setLogOpen(true)} disabled={phase === 'complete'}>
             로그
           </button>
-          <button type="button" className="st-ctl" aria-pressed={auto} onClick={() => setAuto((a) => !a)} disabled={phase === 'complete'}>
-            자동
-          </button>
-          <button type="button" className="st-ctl" onClick={skipScene} disabled={phase !== 'reading'}>
-            장면 넘기기
+          <div className="st-ctl-pair">
+            <button type="button" className="st-ctl" aria-pressed={auto} onClick={() => setAuto((a) => !a)} disabled={phase === 'complete'}>
+              자동
+            </button>
+            <button
+              type="button"
+              className="st-ctl st-ctl-speed mono"
+              onClick={cycleSpeed}
+              disabled={phase === 'complete'}
+              aria-label={`자동 속도 ${speed}배`}
+              title="자동 넘기기 속도"
+            >
+              {speedLabel(speed)}
+            </button>
+          </div>
+          <button type="button" className="st-ctl" onClick={skipScene} disabled={phase !== 'reading' || sceneEnd} aria-label="장면 끝으로 건너뛰기">
+            Skip
           </button>
           <button type="button" className="st-ctl st-ctl-close" onClick={close} aria-label="닫기">
             <span className="st-ctl-text">닫기</span>
@@ -328,10 +398,20 @@ export function Reader({ chapter, world, save }: { chapter: Chapter; world: Worl
           </div>
         )}
 
-        {phase === 'reading' && titleCard === pos.beat && node && (
-          <div className="st-title-card" aria-hidden="true">
-            <span className="mono">{sceneLabel}</span>
-            <strong>{node.title}</strong>
+        {(phase === 'reading' || phase === 'loading') && node && (
+          <div className="st-place" aria-hidden="true">
+            {location && (
+              <span className="st-loc">
+                <i />
+                {location.name}
+              </span>
+            )}
+            {phase === 'reading' && titleCard === pos.beat && (
+              <div className="st-title-card">
+                <span className="mono">{sceneLabel}</span>
+                <strong>{node.title}</strong>
+              </div>
+            )}
           </div>
         )}
 
@@ -348,6 +428,30 @@ export function Reader({ chapter, world, save }: { chapter: Chapter; world: Worl
             <span className="st-count mono" aria-hidden="true">
               {pos.segment + 1}/{segments?.length ?? 0}
             </span>
+          </div>
+        )}
+
+        {phase === 'reading' && sceneEnd && (
+          <div className="st-choice-layer" onClick={(e) => e.stopPropagation()}>
+            <div ref={choiceRef} className="st-choice" role="alertdialog" aria-modal="true" aria-labelledby="st-choice-title" aria-describedby="st-choice-desc">
+              <span className="kicker mono">
+                SCENE {pos.beat + 1}/{total} · END
+              </span>
+              <p id="st-choice-title" className="st-choice-title">
+                장면이 끝났습니다
+              </p>
+              <p id="st-choice-desc" className="small muted">
+                다음: {pos.beat + 2}/{total} 장면
+              </p>
+              <div className="st-choice-actions">
+                <button type="button" className="btn btn-ghost st-choice-cancel" onClick={close}>
+                  취소
+                </button>
+                <button type="button" className="btn btn-accent st-choice-go" onClick={continueScene}>
+                  이어보기
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -414,7 +518,7 @@ export function Reader({ chapter, world, save }: { chapter: Chapter; world: Worl
       </p>
 
       {logOpen && (
-        <div className="st-log-layer" onClick={() => setLogOpen(false)}>
+        <div className="st-log-layer" onClick={closeLog}>
           <div ref={logRef} className="st-log" role="dialog" aria-modal="true" aria-labelledby="st-log-title" onClick={(e) => e.stopPropagation()}>
             <header className="st-log-head">
               <div>
@@ -425,10 +529,7 @@ export function Reader({ chapter, world, save }: { chapter: Chapter; world: Worl
                 type="button"
                 className="icon-btn st-log-close"
                 aria-label="로그 닫기"
-                onClick={() => {
-                  setLogOpen(false);
-                  rootRef.current?.focus();
-                }}
+                onClick={closeLog}
               >
                 <Icon name="close" size={18} />
               </button>
