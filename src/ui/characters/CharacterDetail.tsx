@@ -121,7 +121,7 @@ export function CharacterDetail({ character: c, save, no }: { character: Charact
 
       <dl className="cd-facts">
         <div>
-          <dt>한계 돌파</dt>
+          <dt>공명</dt>
           <dd>{owned ? `${owned.potential - 1} / 5` : '—'}</dd>
         </div>
         <div>
