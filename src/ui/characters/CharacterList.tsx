@@ -2,6 +2,7 @@
 import { paths } from '../router';
 import type { Character, Id, Rarity, Save, World } from '../../types';
 import { LockMark, Portrait, RarityBadge } from './Portrait';
+import './character-editor.css';
 
 export type RarityFilter = 'all' | Rarity | 'owned';
 /** "role:딜러" 처럼 분류:값. 빈 문자열이면 전체 */
@@ -75,6 +76,14 @@ export function CharacterList({
 
   return (
     <div className="stack chars-left">
+      <div className="chars-actions">
+        <a className="btn btn-small" href={'#' + paths.newCharacter}>
+          새 캐릭터
+        </a>
+        <a className="btn btn-small" href={'#' + paths.importCards}>
+          카드 가져오기
+        </a>
+      </div>
       <div className="chars-filters">
         <div className="chips" role="toolbar" aria-label="희귀도 필터">
           {RARITY_CHIPS.map((f) => (

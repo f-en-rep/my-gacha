@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Icon } from '../Icon';
+import { Icon, type IconName } from '../Icon';
 import { useSetupSteps } from '../setup';
 import { paths } from '../router';
 import { db } from '../../db';
@@ -120,19 +120,25 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
     );
   }
 
+  const pityPct = Math.min(100, (pity / rules.pityThreshold) * 100);
+
   return (
     <div className="lobby" aria-hidden={panelOpen || undefined}>
-      <div className="lobby-floor" aria-hidden="true" />
+      <Sky />
 
       <header className="lobby-hud">
-        <span className="brand-mark" aria-hidden="true" />
-        <div className="hud-world">
-          <span className="kicker">WORLD</span>
-          <strong>
-            <span className="hud-world-name">{ready?.name ?? '월드 없음'}</span>
-            {ready && save?.freeMode && <span className="hud-free">자유 모드</span>}
-          </strong>
-        </div>
+        <a className="hud-world" href={'#' + paths.world}>
+          <span className="hud-star" aria-hidden="true">
+            <Icon name="star" size={18} />
+          </span>
+          <span className="hud-world-text">
+            <span className="kicker">WORLD</span>
+            <strong>
+              <span className="hud-world-name">{ready?.name ?? '월드 없음'}</span>
+              {ready && save?.freeMode && <span className="hud-free">자유 모드</span>}
+            </strong>
+          </span>
+        </a>
         <div className="hud-currency">
           <span className="currency currency-pull">
             <i aria-hidden="true" />
@@ -144,7 +150,7 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
           </a>
           {canClaim && (
             <button type="button" className="hud-daily" disabled={claiming} onClick={() => void claim()}>
-              오늘의 보상 받기 <b>+{fmt(DAILY_PULL_CURRENCY)}</b>
+              오늘의 보상 <b>+{fmt(DAILY_PULL_CURRENCY)}</b>
             </button>
           )}
         </div>
@@ -154,17 +160,23 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
       </header>
 
       <div className="lobby-stage">
-        <div className="stage-frame">
-          <div className="stage-motif" aria-hidden="true" />
-          <div className="stage-art has-portrait">
+        <figure className="stage-arch">
+          <div className="arch-window">
             {featured ? (
               <Portrait assetId={featured.portraitId} alt={featured.name} className="stage-portrait" silhouetteClass="lobby-figure" rarity={featured.rarity} />
             ) : (
-              <img className="stage-portrait card-art" src={CARD_BACK_COMMON} alt="" draggable={false} />
+              <img className="stage-portrait" src={CARD_BACK_COMMON} alt="" draggable={false} />
             )}
-            <span className="stage-caption">{featured ? featured.name : '대표 캐릭터 자리'}</span>
           </div>
-        </div>
+          <figcaption className="stage-plate">
+            {featured && (
+              <span className="plate-stars" aria-label={`${featured.rarity}성`}>
+                {'★'.repeat(featured.rarity)}
+              </span>
+            )}
+            <strong>{featured ? featured.name : '대표 캐릭터 자리'}</strong>
+          </figcaption>
+        </figure>
       </div>
 
       <div
@@ -185,38 +197,73 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
               nextQuote();
             }}
           >
-            ▼
+            <Icon name="star" size={12} />
           </button>
         ) : (
           <span className="dialog-cursor" aria-hidden="true">
-            ▼
+            <Icon name="star" size={12} />
           </span>
         )}
       </div>
 
       <nav className="lobby-menu" aria-label="주 메뉴">
         <a className="menu-pull" href={'#' + paths.pull}>
-          <span>
+          <span className="menu-pull-icon" aria-hidden="true">
+            <Icon name="star" size={26} />
+          </span>
+          <span className="menu-pull-text">
             <span className="kicker">HEADHUNT</span>
             <strong>뽑기</strong>
           </span>
-          <span className="mono">
-            PITY {pity}/{rules.pityThreshold} →
+          <span className="menu-pity">
+            <span className="mono">
+              PITY {pity}/{rules.pityThreshold}
+            </span>
+            <span className="pity-track" aria-hidden="true">
+              <span style={{ width: pityPct + '%' }} />
+            </span>
           </span>
         </a>
-        <a href={'#' + paths.characters}>
-          <strong>캐릭터</strong>
-          <span className="kicker">OPERATORS</span>
-        </a>
-        <a href={'#' + paths.story}>
-          <strong>스토리</strong>
-          <span className="kicker">STORY</span>
-        </a>
-        <a href={'#' + paths.world}>
-          <strong>월드</strong>
-          <span className="kicker">WORLD</span>
-        </a>
+        <MenuItem href={paths.characters} icon="cards" label="캐릭터" kicker="OPERATORS" />
+        <MenuItem href={paths.story} icon="book" label="스토리" kicker="STORY" />
+        <MenuItem href={paths.chat()} icon="chat" label="대화" kicker="TALK" />
+        <MenuItem href={paths.shop} icon="bag" label="상점" kicker="SHOP" />
+        <MenuItem href={paths.world} icon="globe" label="월드" kicker="WORLD" className="menu-world" />
       </nav>
+    </div>
+  );
+}
+
+function MenuItem({ href, icon, label, kicker, className }: { href: string; icon: IconName; label: string; kicker: string; className?: string }) {
+  return (
+    <a className={'menu-item' + (className ? ' ' + className : '')} href={'#' + href}>
+      <span className="menu-node" aria-hidden="true">
+        <Icon name={icon} size={20} />
+      </span>
+      <strong>{label}</strong>
+      <span className="kicker">{kicker}</span>
+    </a>
+  );
+}
+
+/** 로비 뒤 하늘: 궤도 고리와 반짝이는 별 (장식) */
+function Sky() {
+  const sparkles: [number, number, number][] = [
+    [8, 14, 9], [22, 6, 5], [86, 10, 7], [93, 30, 5], [5, 46, 6], [14, 72, 5], [90, 62, 8], [78, 84, 5], [34, 90, 4], [62, 4, 4],
+  ];
+  return (
+    <div className="lobby-sky" aria-hidden="true">
+      <svg className="sky-orbits" viewBox="-500 -500 1000 1000" preserveAspectRatio="xMidYMid meet">
+        <circle r="300" />
+        <circle r="420" className="dash" />
+        <ellipse rx="490" ry="150" transform="rotate(-18)" />
+        <ellipse rx="470" ry="120" transform="rotate(24)" className="dash" />
+      </svg>
+      {sparkles.map(([x, y, r], i) => (
+        <svg key={i} className="sky-spark" style={{ left: x + '%', top: y + '%', width: r * 2, height: r * 2, animationDelay: i * 0.7 + 's' }} viewBox="-10 -10 20 20">
+          <path d="M0-10C.8-2 2-.8 10 0 2 .8.8 2 0 10-.8 2-2 .8-10 0-2-.8-.8-2 0-10z" />
+        </svg>
+      ))}
     </div>
   );
 }

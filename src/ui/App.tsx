@@ -17,7 +17,7 @@ function PanelFor({ route }: { route: Route }) {
     case 'pull':
       return <PullPanel banner={route.banner} />;
     case 'characters':
-      return <CharactersPanel id={route.id} />;
+      return <CharactersPanel id={route.id} mode={route.mode} />;
     case 'world':
       return <WorldPanel />;
     case 'chat':

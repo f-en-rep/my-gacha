@@ -181,6 +181,19 @@ describe('월드 팩', () => {
     expect(await db.characters.where('worldId').equals('w1').count()).toBe(4);
   });
 
+  it('카드에서 가져온 캐릭터의 출처(origin)가 팩·백업을 지나도 남는다', async () => {
+    const origin = { kind: 'card' as const, fileName: 'sera.png', creator: 'tester', spec: 'chara_card_v3', scenario: '여관', greeting: '"어서 와."' };
+    await db.characters.update('c4', { origin });
+    const { blob } = await exportWorldPack('w1', { includeStory: false });
+    const wid = await importWorldPack(new File([blob], 'a.gachapack.zip'));
+    const c4 = (await db.characters.where('worldId').equals(wid).toArray()).find((c) => c.name === '캐릭터 c4');
+    expect(c4?.origin).toEqual(origin);
+    const backup = await exportBackup('w1');
+    const bid = await importBackup(new File([backup.blob], 'a.backup.zip'));
+    const b4 = (await db.characters.where('worldId').equals(bid).toArray()).find((c) => c.name === '캐릭터 c4');
+    expect(b4?.origin).toEqual(origin);
+  });
+
   it('생성 중인 월드는 내보낼 수 없다', async () => {
     await db.worlds.update('w1', { status: 'generating' });
     await expect(exportWorldPack('w1', { includeStory: false })).rejects.toBeInstanceOf(PackError);

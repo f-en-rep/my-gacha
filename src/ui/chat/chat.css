@@ -19,7 +19,7 @@
   place-items: end center;
   overflow: hidden;
   background: var(--sunken);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
 }
 
 .ch-row-art {
@@ -43,7 +43,7 @@
   display: block;
   width: 70%;
   height: 92%;
-  fill: #d6d3c9;
+  fill: var(--rule);
 }
 
 .ch-row-text {
@@ -99,7 +99,7 @@
   height: 10px;
   margin-right: 4px;
   background: var(--accent);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
 }
 
 /* ── 대화방이 오른쪽 페이지를 꽉 채우게 ─────────────── */
@@ -130,7 +130,7 @@
   display: flex;
   flex-direction: column;
   padding-bottom: var(--ch-kb);
-  background: #fbfaf6;
+  background: var(--surface);
 }
 
 /* ── 대화방 머리말 ───────────────────────────────── */
@@ -141,7 +141,7 @@
   gap: 10px;
   padding: 12px 16px;
   background: var(--paper);
-  border-bottom: 1px solid var(--ink);
+  border-bottom: 1px solid var(--line);
 }
 
 .ch-head-main {
@@ -207,14 +207,14 @@
   min-width: 60px;
   height: 8px;
   background: var(--surface);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
 }
 
 .ch-gauge > span {
   display: block;
   height: 100%;
   background: var(--accent);
-  border-right: 1px solid var(--ink);
+  border-right: 1px solid var(--line);
   transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -226,7 +226,7 @@
 
 .ch-claim {
   flex: none;
-  box-shadow: 2px 2px 0 var(--ink);
+  box-shadow: var(--shadow-sm);
 }
 
 .ch-claim b {
@@ -290,7 +290,7 @@
   max-width: 320px;
   padding: 14px 16px;
   background: var(--surface);
-  border: 1px dashed var(--ink);
+  border: 1px dashed var(--line);
   text-align: center;
   font-size: 14px;
 }
@@ -390,7 +390,7 @@
 .ch-bubble {
   min-width: 0;
   padding: 9px 12px;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
   font-size: 14.5px;
   line-height: 1.6;
   white-space: pre-wrap;
@@ -402,7 +402,7 @@
 }
 
 .ch-char.is-first .ch-bubble {
-  box-shadow: 2px 2px 0 var(--rule);
+  box-shadow: var(--shadow-sm);
 }
 
 .ch-user .ch-bubble {
@@ -510,8 +510,8 @@
   min-height: 36px;
   padding: 0 14px;
   background: var(--accent);
-  border: 1px solid var(--ink);
-  box-shadow: 2px 2px 0 var(--ink);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
   color: var(--ink);
   font: inherit;
   font-size: 13px;
@@ -529,7 +529,7 @@
   gap: 8px;
   padding: 10px 12px calc(10px + var(--safe-b));
   background: var(--paper);
-  border-top: 1px solid var(--ink);
+  border-top: 1px solid var(--line);
 }
 
 .ch-composer textarea {
@@ -537,7 +537,7 @@
   min-width: 0;
   min-height: 46px;
   padding: 11px 12px;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
   border-radius: 0;
   line-height: 22px;
   resize: none;
@@ -556,13 +556,13 @@
   width: 46px;
   height: 46px;
   background: var(--accent);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
   color: var(--ink);
   cursor: pointer;
 }
 
 .ch-send:hover:not(:disabled) {
-  background: #ffb800;
+  background: #e3b13f;
 }
 
 .ch-send:disabled {
@@ -580,7 +580,7 @@
   gap: 8px 12px;
   padding: 12px 16px calc(12px + var(--safe-b));
   background: var(--accent-soft);
-  border-top: 1px solid var(--ink);
+  border-top: 1px solid var(--line);
   font-size: 13.5px;
 }
 
@@ -621,11 +621,12 @@
 .ch-lobby-talk {
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  margin-top: 6px;
-  padding: 0 10px;
-  background: var(--accent);
-  border: 1px solid var(--ink);
+  min-height: 30px;
+  margin-top: 8px;
+  padding: 0 14px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
   color: var(--ink) !important;
   font-size: 12.5px;
   font-weight: 700;
@@ -633,7 +634,7 @@
 }
 
 .ch-lobby-talk:hover {
-  background: #ffb800;
+  background: var(--accent);
 }
 
 a.currency.ch-shop-chip {

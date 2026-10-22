@@ -82,6 +82,16 @@ export const characterSchema = z.object({
     .object({ hp: z.number(), atk: z.number(), def: z.number(), spd: z.number(), range: z.number(), block: z.number() })
     .optional(),
   detail: z.enum(['full', 'light']),
+  origin: z
+    .object({
+      kind: z.literal('card'),
+      fileName: text(500),
+      creator: text(500).optional(),
+      spec: text(100),
+      scenario: text().optional(),
+      greeting: text().optional(),
+    })
+    .optional(),
   createdAt: iso,
   updatedAt: iso,
 });

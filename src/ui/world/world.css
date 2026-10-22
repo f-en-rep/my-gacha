@@ -104,7 +104,7 @@
 .wl-mark {
   padding: 1px 6px;
   background: var(--accent);
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
   font-size: 11px;
   font-weight: 700;
 }
@@ -128,15 +128,15 @@
 .wl-dialog {
   width: min(440px, calc(100vw - 32px));
   padding: 22px 20px 18px;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
   border-radius: var(--r);
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 6px 6px 0 var(--ink);
+  box-shadow: var(--shadow);
 }
 
 .wl-dialog::backdrop {
-  background: rgba(23, 23, 26, 0.4);
+  background: rgba(34, 40, 73, 0.4);
 }
 
 .wl-dialog h2 {
@@ -248,7 +248,7 @@
   flex-direction: column;
   gap: 8px;
   padding: 16px;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
   background: var(--surface);
 }
 
@@ -325,9 +325,9 @@
   justify-content: space-between;
   gap: 12px;
   padding: 14px 16px;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--line);
   background: var(--accent-soft);
-  box-shadow: 4px 4px 0 var(--ink);
+  box-shadow: var(--shadow);
 }
 
 .wi-ready > span {

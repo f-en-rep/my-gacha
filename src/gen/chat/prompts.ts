@@ -8,6 +8,9 @@ import { worldBlock } from '../story/prompts';
 /** 프롬프트에 넣는 최근 대화 줄 수 */
 export const HISTORY_LINES = 40;
 
+/** 카드 상황·첫 인사를 프롬프트에 넣는 최대 글자 수 */
+const CARD_REF_LIMIT = 1500;
+
 const NEUTRAL_YOU: Record<string, string> = {
   ko: '당신',
   en: 'you',
@@ -55,6 +58,11 @@ function sheet(c: Character): string {
     `Background: ${c.background.trim() || '-'}`,
   ];
   if (quotes.length) lines.push(`Voice samples (match this way of speaking):\n${quotes.map((q) => `- "${q}"`).join('\n')}`);
+  // 카드에서 가져온 캐릭터: 원래 카드의 상황과 첫 인사를 참고로
+  const scenario = c.origin?.scenario?.trim();
+  const greeting = c.origin?.greeting?.trim();
+  if (scenario) lines.push(`Original setting notes (background reference only):\n${scenario.slice(0, CARD_REF_LIMIT)}`);
+  if (greeting) lines.push(`Original greeting (tone reference only; do not repeat it):\n${greeting.slice(0, CARD_REF_LIMIT)}`);
   return lines.join('\n');
 }
 

@@ -6,7 +6,7 @@ export type SettingsSub = { kind: 'connection'; id: string } | { kind: 'routing'
 export type Route =
   | { name: 'home' }
   | { name: 'pull'; banner?: 'new' | { edit: string } }
-  | { name: 'characters'; id?: string }
+  | { name: 'characters'; id?: string; mode?: 'new' | 'edit' | 'import' }
   | { name: 'world' }
   | { name: 'story'; chapterId?: string; read?: boolean }
   | { name: 'chat'; characterId?: string }
@@ -31,6 +31,8 @@ export function parseHash(hash: string): Route {
       if (b && c === 'read') return { name: 'story', chapterId: b, read: true };
       return b ? { name: 'story', chapterId: b } : { name: 'story' };
     case 'characters':
+      if (b === 'new' || b === 'import') return { name: 'characters', mode: b };
+      if (b && c === 'edit') return { name: 'characters', id: b, mode: 'edit' };
       return b ? { name: 'characters', id: b } : { name: 'characters' };
     case 'world':
       return { name: 'world' };
@@ -70,6 +72,9 @@ export const paths = {
   pull: '/pull',
   characters: '/characters',
   character: (id: string) => `/characters/${encodeURIComponent(id)}`,
+  newCharacter: '/characters/new',
+  editCharacter: (id: string) => `/characters/${encodeURIComponent(id)}/edit`,
+  importCards: '/characters/import',
   world: '/world',
   newBanner: '/pull/new',
   editBanner: (id: string) => `/pull/edit/${encodeURIComponent(id)}`,
