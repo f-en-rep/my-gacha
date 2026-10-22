@@ -4,6 +4,7 @@ import { newId, now } from '../../core/id';
 import { describeTextError, generateJson } from '../text';
 import { SCHEMA_VERSION } from '../../types';
 import type { Banner, Character, Id, Rarity, TextProfile, World } from '../../types';
+import { promptCtx } from '../prompts';
 import { bannerMetaMessages, cardMessages, characterMessages, setupMessages, type BannerMetaPromptOptions, type CardPromptInput, type CharacterPromptOptions } from './prompts';
 import { bannerMetaSchema, cardSheetSchema, characterListSchema, setupSchema, type BannerMeta, type CardSheet, type CharacterDraft } from './schema';
 
@@ -160,7 +161,7 @@ export async function generateWorld(worldId: Id, opts: GenerateOptions = {}): Pr
       const p = await getProfile();
       const askName = !world.name.trim();
       const askArt = !world.art.positiveTags.trim();
-      const { value } = await generateJson(p, setupMessages(world, { askName, askArt }), setupSchema({ language: world.language, askName, askArt }), {
+      const { value } = await generateJson(p, setupMessages(world, { askName, askArt }, await promptCtx('world-setup')), setupSchema({ language: world.language, askName, askArt }), {
         signal,
         maxTokens: p.maxTokens ?? 8192,
         temperature: p.temperature ?? 0.7,
@@ -257,7 +258,7 @@ async function addCharacters(
   if (o.index !== undefined) promptOpts.index = o.index;
   if (o.brief?.trim()) promptOpts.brief = o.brief.trim();
   const schema = characterListSchema({ catalog: world.tags, count, detail, existingNames: cast.map((c) => c.name) });
-  const { value } = await generateJson(p, characterMessages(world, cast, promptOpts), schema, {
+  const { value } = await generateJson(p, characterMessages(world, cast, promptOpts, await promptCtx('characters')), schema, {
     signal,
     maxTokens: p.maxTokens ?? 8192,
     temperature: p.temperature ?? 0.9,
@@ -336,7 +337,7 @@ export async function generateBannerMeta(worldId: Id, opts: BannerMetaOptions): 
   const promptOpts: BannerMetaPromptOptions = { featuredNames: opts.featuredNames };
   if (opts.brief?.trim()) promptOpts.brief = opts.brief.trim();
   if (opts.kind) promptOpts.kind = opts.kind;
-  const { value } = await generateJson(p, bannerMetaMessages(world, promptOpts), bannerMetaSchema(), {
+  const { value } = await generateJson(p, bannerMetaMessages(world, promptOpts, await promptCtx('banner')), bannerMetaSchema(), {
     signal: opts.signal,
     maxTokens: p.maxTokens ?? 4096,
     temperature: p.temperature ?? 0.9,
@@ -357,7 +358,7 @@ export async function sheetFromCard(worldId: Id, card: CardPromptInput, opts: Ca
   const world = await loadReadyWorld(worldId);
   const p = await resolveStructuredProfile();
   const cast = await castOf(worldId);
-  const { value } = await generateJson(p, cardMessages(world, cast, card, { askRarity: opts.askRarity }), cardSheetSchema(world.tags), {
+  const { value } = await generateJson(p, cardMessages(world, cast, card, { askRarity: opts.askRarity }, await promptCtx('card')), cardSheetSchema(world.tags), {
     signal: opts.signal,
     maxTokens: p.maxTokens ?? 8192,
     temperature: p.temperature ?? 0.7,
@@ -389,7 +390,7 @@ export async function draftCharacter(worldId: Id, opts: DraftCharacterOptions): 
   // 정해 둔 이름은 겹쳐도 받아 준다 (플레이어가 고른 것)
   const existingNames = cast.map((c) => c.name).filter((n) => !name || n.trim() !== name);
   const schema = characterListSchema({ catalog: world.tags, count: 1, detail, existingNames });
-  const { value } = await generateJson(p, characterMessages(world, cast, promptOpts), schema, {
+  const { value } = await generateJson(p, characterMessages(world, cast, promptOpts, await promptCtx('characters')), schema, {
     signal: opts.signal,
     maxTokens: p.maxTokens ?? 8192,
     temperature: p.temperature ?? 0.9,

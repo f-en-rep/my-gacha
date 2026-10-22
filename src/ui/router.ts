@@ -1,7 +1,12 @@
 // 아주 작은 해시 라우터. 로비는 늘 깔려 있고, 경로는 그 위에 열 패널을 정한다.
 import { useSyncExternalStore } from 'react';
 
-export type SettingsSub = { kind: 'connection'; id: string } | { kind: 'routing' } | { kind: 'storage' } | { kind: 'diagnostics' };
+export type SettingsSub =
+  | { kind: 'connection'; id: string }
+  | { kind: 'routing' }
+  | { kind: 'storage' }
+  | { kind: 'diagnostics' }
+  | { kind: 'prompts'; id?: string };
 
 export type Route =
   | { name: 'home' }
@@ -40,6 +45,7 @@ export function parseHash(hash: string): Route {
       return { name: 'settings', sub: { kind: 'diagnostics' } };
     case 'settings':
       if (b === 'connections' && c) return { name: 'settings', sub: { kind: 'connection', id: c } };
+      if (b === 'prompts') return { name: 'settings', sub: c ? { kind: 'prompts', id: c } : { kind: 'prompts' } };
       if (b === 'routing' || b === 'storage' || b === 'diagnostics') return { name: 'settings', sub: { kind: b } };
       return { name: 'settings' };
     default:
@@ -88,4 +94,6 @@ export const paths = {
   storage: '/settings/storage',
   diagnostics: '/settings/diagnostics',
   connection: (id: string) => `/settings/connections/${encodeURIComponent(id)}`,
+  prompts: '/settings/prompts',
+  prompt: (id: string) => `/settings/prompts/${encodeURIComponent(id)}`,
 };

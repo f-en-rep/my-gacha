@@ -1,0 +1,228 @@
+/* ── 프롬프트 목록·편집 (pe-) ─────────────────────────
+   styles.css의 토큰과 공용 클래스(field, btn, menu-row, page-section-head …)를 그대로 쓴다. */
+
+.pe-badge {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--gold);
+  font-size: 11.5px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.pe-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pe-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  color: var(--ink-2);
+  text-decoration: none;
+}
+
+.pe-back:hover {
+  color: var(--ink);
+}
+
+/* 변수 목록 */
+.pe-vars {
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--surface);
+}
+
+.pe-vars summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.pe-vars p {
+  margin: 8px 0;
+}
+
+.pe-vars dl {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.pe-vars dl > div {
+  display: grid;
+  grid-template-columns: minmax(0, 9.5em) minmax(0, 1fr);
+  gap: 10px;
+  font-size: 12.5px;
+}
+
+.pe-vars dt code {
+  font-family: var(--mono);
+  color: var(--gold);
+  overflow-wrap: anywhere;
+}
+
+.pe-vars dd {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+/* 칸 목록 */
+.pe-sections {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pe-msg {
+  margin-top: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.pe-sec-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.pe-sec-head > label,
+.pe-sec-head > strong {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.pe-reset {
+  margin-left: auto;
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.pe-sec textarea {
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.pe-lock,
+.pe-data {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--r);
+  background: var(--sunken);
+  border: 1px solid var(--rule-soft);
+}
+
+.pe-data {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--rule);
+}
+
+.pe-lock .pe-sec-head > strong,
+.pe-data .pe-sec-head > strong {
+  color: var(--ink-2);
+}
+
+.pe-lock-note {
+  margin-left: auto;
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+.pe-lock-note::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 5px;
+  border: 1.5px solid currentColor;
+  border-radius: 1px;
+  vertical-align: 1px;
+}
+
+.pe-data .pe-lock-note::before {
+  border-radius: 50%;
+}
+
+.pe-lock pre,
+.pe-message pre {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pe-lock pre {
+  color: var(--ink-3);
+  max-height: 14em;
+  overflow: auto;
+}
+
+.pe-warn {
+  color: var(--wait);
+}
+
+.pe-actions {
+  flex-wrap: wrap;
+}
+
+/* 미리 보기 */
+.pe-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.pe-preview > .btn {
+  align-self: flex-start;
+}
+
+.pe-message {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.pe-role {
+  align-self: flex-start;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--sunken);
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.pe-message pre {
+  color: var(--ink);
+}
