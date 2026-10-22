@@ -2,6 +2,8 @@
 import { useSyncExternalStore } from 'react';
 import { planNextChapter } from '../../gen/story';
 import { navigate, paths } from '../router';
+import { db } from '../../db';
+import { addNotice, noticeFailure, resolveNotice } from '../../game/notices';
 import type { Id, StoryProgress } from '../../types';
 
 export interface PlanState {
@@ -45,12 +47,18 @@ export async function startPlan(worldId: Id): Promise<void> {
       onProgress: (stage) => set(worldId, { running: true, stage }),
     });
     set(worldId, { running: false, chapterId: id });
+    const ch = await db.chapters.get(id);
+    void resolveNotice(`story-plan:${worldId}`);
+    await addNotice({ key: `story-plan:${worldId}`, kind: 'done', job: 'story-plan', title: `${ch?.index ?? ''}장 「${ch?.title ?? ''}」을(를) 계획했어요`, link: paths.chapter(id), worldId });
     // 스토리 패널을 보고 있으면 새 챕터를 바로 고른다 (읽기 화면이나 다른 패널이면 그대로 둔다)
     const h = location.hash.replace(/^#\/?/, '');
     if (h === 'story' || (h.startsWith('story/') && !h.endsWith('/read'))) navigate(paths.chapter(id), { replace: true });
   } catch (e) {
     if (ctrl.signal.aborted) set(worldId, { running: false, cancelled: true });
-    else set(worldId, { running: false, error: e instanceof Error ? e.message : String(e) });
+    else {
+      set(worldId, { running: false, error: e instanceof Error ? e.message : String(e) });
+      await noticeFailure({ key: `story-plan:${worldId}`, job: 'story-plan', title: '다음 챕터를 계획하지 못했어요', link: paths.story, worldId }, e, ctrl.signal);
+    }
   } finally {
     controllers.delete(worldId);
   }

@@ -3,6 +3,8 @@
 import { useSyncExternalStore } from 'react';
 import { generateWorld } from '../../gen/world';
 import { activateWorld } from '../../game/store';
+import { db } from '../../db';
+import { addNotice, noticeFailure, resolveNotice } from '../../game/notices';
 import type { Id } from '../../types';
 
 export interface RunState {
@@ -49,9 +51,21 @@ export async function startGeneration(id: Id): Promise<void> {
     });
     await activateWorld(id);
     set(id, { running: false, finished: true });
+    const w = await db.worlds.get(id);
+    void resolveNotice(`world:${id}`);
+    await addNotice({ key: `world:${id}`, kind: 'done', job: 'world', title: `「${w?.name || '새 월드'}」 월드가 준비됐어요`, link: `/world/${encodeURIComponent(id)}`, worldId: id });
   } catch (e) {
     if (ctrl.signal.aborted) set(id, { running: false, cancelled: true });
-    else set(id, { running: false, error: e instanceof Error ? e.message : String(e) });
+    else {
+      set(id, { running: false, error: e instanceof Error ? e.message : String(e) });
+      const w = await db.worlds.get(id).catch(() => undefined);
+      const stage = w?.genProgress?.stage;
+      await noticeFailure(
+        { key: `world:${id}`, job: 'world', title: `「${w?.name || '새 월드'}」 생성이 멈췄어요${stage ? ` (${stage})` : ''}`, link: `/world/${encodeURIComponent(id)}`, worldId: id },
+        e,
+        ctrl.signal,
+      );
+    }
   } finally {
     controllers.delete(id);
   }

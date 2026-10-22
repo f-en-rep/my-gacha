@@ -4,12 +4,14 @@
 // - 캐릭터 = 픽업 캐릭터 최대 3명 (6★ 먼저, 다음 5★). NovelAI V4 이상은 캐릭터 슬롯으로 따로,
 //   슬롯이 없는 모델은 공통 프롬프트 뒤에 이어 붙는다 (gen/image가 처리)
 // - 같은 배너를 동시에 두 번 그리지 않는다 (inFlight)
+// - 다 그리면·실패하면 알림 (취소는 빼고)
 import { db } from '../db';
 import { newId, now } from '../core/id';
 import { paintQueued, toImageError, toWebp } from '../gen/image';
 import type { CharacterPrompt } from '../gen/image/types';
 import type { Asset, Banner, Character, Id, ImageGenSettings, World } from '../types';
 import { DEFAULT_NEGATIVE_TAGS, getImageProfile, joinTags, type PaintOptions } from './portraits';
+import { addNotice, noticeFailure, resolveNotice } from './notices';
 
 /** 배너 그림 구도 태그 */
 export const BANNER_FRAMING_TAGS = 'key visual, banner art, dynamic composition, detailed background';
@@ -98,7 +100,24 @@ export function isPaintingBanner(bannerId: Id): boolean {
 export function paintBannerArt(bannerId: Id, opts: PaintOptions = {}): Promise<Id | undefined> {
   const running = inFlight.get(bannerId);
   if (running) return running;
-  const p = doPaint(bannerId, opts).finally(() => inFlight.delete(bannerId));
+  const key = `banner-art:${bannerId}`;
+  const link = `/pull/edit/${encodeURIComponent(bannerId)}`;
+  const p = (async () => {
+    const before = opts.force ? undefined : (await db.banners.get(bannerId).catch(() => undefined))?.artId;
+    try {
+      const id = await doPaint(bannerId, opts);
+      if (id) await resolveNotice(key);
+      if (id && id !== before) {
+        const b = await db.banners.get(bannerId);
+        if (b) await addNotice({ key, kind: 'done', job: 'banner-art', title: `배너 「${b.name}」 그림을 그렸어요`, link, worldId: b.worldId });
+      }
+      return id;
+    } catch (e) {
+      const b = await db.banners.get(bannerId).catch(() => undefined);
+      await noticeFailure({ key, job: 'banner-art', title: `배너 「${b?.name ?? '배너'}」 그림을 그리지 못했어요`, link, worldId: b?.worldId }, e, opts.signal);
+      throw e;
+    }
+  })().finally(() => inFlight.delete(bannerId));
   inFlight.set(bannerId, p);
   return p;
 }

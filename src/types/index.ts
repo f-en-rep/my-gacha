@@ -6,3 +6,5 @@ export * from './settings';
 export * from './asset';
 export * from './story';
 export * from './chat';
+export * from './lore';
+export * from './notice';

@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { db } from '../db';
-import { SCHEMA_VERSION, type Asset, type Banner, type Beat, type Chapter, type Character, type ChatLine, type Location, type PullRecord, type Save, type World } from '../types';
+import { SCHEMA_VERSION, type Asset, type Banner, type Beat, type Chapter, type Character, type ChatLine, type Location, type LoreEntry, type Notice, type PullRecord, type Save, type World } from '../types';
 import { exportBackup, exportWorldPack, importBackup, importWorldPack, packFilename, PackError } from './index';
 
 const T = '2026-10-01T00:00:00.000Z';
@@ -362,7 +362,7 @@ describe('스토리', () => {
     const m = JSON.parse(strFromU8(files['manifest.json']!));
     expect(m.formatVersion).toBe(1);
     expect(m.includes).toEqual({ story: true });
-    expect(m.story).toEqual({ chapters: 2, beats: 2, locations: 1 });
+    expect(m.story).toEqual({ chapters: 2, beats: 2, locations: 1, lore: 0 });
     expect(m.images.find((i: { assetId: string }) => i.assetId === 'a2')).toMatchObject({ file: 'images/a2.png', mime: 'image/png' });
     // 진행은 여전히 없다
     expect(names.some((n) => n.startsWith('saves/'))).toBe(false);
@@ -457,6 +457,73 @@ describe('스토리', () => {
     await expect(importWorldPack(zipBlob(files))).rejects.toThrow(/story\/beats\/bt1.json 내용이 올바르지 않습니다/);
     expect(await db.worlds.count()).toBe(n);
     expect(await db.chapters.count()).toBe(chapters);
+  });
+});
+
+describe('기록과 내 프로필', () => {
+  const lore = (id: string, over: Partial<LoreEntry> = {}): LoreEntry => ({
+    id,
+    worldId: 'w1',
+    kind: 'person',
+    name: '등대지기',
+    summary: '섬 끝의 노인',
+    chapterId: 'ch1',
+    chapterIndex: 1,
+    castIds: ['c6', 'ghost'],
+    source: 'story',
+    createdAt: T,
+    updatedAt: T,
+    ...over,
+  });
+  beforeEach(async () => {
+    await seedStory();
+    await db.lore.bulkPut([lore('lo1'), lore('lo2', { kind: 'item', name: '열쇠', chapterId: 'gone', castIds: undefined, source: 'manual' })]);
+    const n: Notice = { id: 'n1', key: 'k', worldId: 'w1', kind: 'error', job: 'world', title: '실패', count: 1, createdAt: T, updatedAt: T };
+    await db.notices.put(n);
+    await db.saves.update('s1', { playerName: '유리', player: { profile: '새 지휘관', appearance: '짧은 흑발', imageTags: '1girl, black hair' } });
+  });
+
+  it('스토리와 함께만 팩에 들어가고, 알림은 어디에도 없다', async () => {
+    const without = Object.keys(await unzipBlob((await exportWorldPack('w1', { includeStory: false })).blob));
+    expect(without.some((n) => n.startsWith('story/lore/'))).toBe(false);
+    const files = await unzipBlob((await exportWorldPack('w1', { includeStory: true })).blob);
+    expect(Object.keys(files)).toEqual(expect.arrayContaining(['story/lore/lo1.json', 'story/lore/lo2.json']));
+    expect(JSON.parse(strFromU8(files['manifest.json']!)).story.lore).toBe(2);
+    const backup = await unzipBlob((await exportBackup('w1')).blob);
+    expect(Object.keys(backup)).toContain('story/lore/lo1.json');
+    for (const f of [files, backup]) expect(Object.keys(f).some((n) => /notice/i.test(n) || strFromU8(f[n]!).includes('"job"'))).toBe(false);
+  });
+
+  it('왕복: 새 id, 챕터·캐스트 참조를 바꿔 끼운다', async () => {
+    const id = await importWorldPack((await exportWorldPack('w1', { includeStory: true })).blob);
+    const got = (await db.lore.where('worldId').equals(id).toArray()).sort((a, b) => a.name.localeCompare(b.name));
+    expect(got).toHaveLength(2);
+    const [keeper, key] = got as [LoreEntry, LoreEntry];
+    const ch1 = (await db.chapters.where('worldId').equals(id).toArray()).find((c) => c.index === 1)!;
+    const c6 = (await db.characters.where('worldId').equals(id).toArray()).find((c) => c.rarity === 6)!;
+    expect(keeper).toMatchObject({ name: '등대지기', chapterId: ch1.id, chapterIndex: 1, castIds: [c6.id], source: 'story', worldId: id });
+    expect(keeper.id).not.toBe('lo1');
+    expect(key.chapterId).toBeUndefined(); // 없는 챕터
+    expect(key.source).toBe('manual');
+    expect(await db.notices.where('worldId').equals(id).count()).toBe(0);
+  });
+
+  it('백업 왕복: 내 프로필이 세이브와 함께 온다', async () => {
+    const id = await importBackup((await exportBackup('w1')).blob);
+    const [save] = await db.saves.where('worldId').equals(id).toArray();
+    expect(save!.playerName).toBe('유리');
+    expect(save!.player).toEqual({ profile: '새 지휘관', appearance: '짧은 흑발', imageTags: '1girl, black hair' });
+    expect(await db.lore.where('worldId').equals(id).count()).toBe(2);
+  });
+
+  it('너무 긴 프로필이나 망가진 기록이면 아무것도 쓰지 않는다', async () => {
+    const files = await unzipBlob((await exportBackup('w1')).blob);
+    const save = JSON.parse(strFromU8(files['saves/s1.json']!));
+    const tooLong = { ...files, 'saves/s1.json': strToU8(JSON.stringify({ ...save, player: { profile: 'a'.repeat(601) } })) };
+    await expect(importBackup(zipBlob(tooLong))).rejects.toThrow(PackError);
+    const badLore = { ...files, 'story/lore/lo1.json': strToU8(JSON.stringify({ id: 'x', kind: 'monster' })) };
+    await expect(importBackup(zipBlob(badLore))).rejects.toThrow('story/lore/lo1.json');
+    expect(await db.worlds.count()).toBe(1);
   });
 });
 

@@ -55,6 +55,16 @@ export interface Wallet {
   shop: number;
 }
 
+/** 플레이어 캐릭터 (세이브마다). 이름은 Save.playerName */
+export interface PlayerProfile {
+  /** 짧은 소개 (월드 언어) */
+  profile?: string;
+  /** 외형 설명 (월드 언어) */
+  appearance?: string;
+  /** 그림용 영어 태그. 지금은 저장만 (플레이어가 나오는 그림이 생기면 쓴다) */
+  imageTags?: string;
+}
+
 export interface Save {
   id: Id;
   worldId: Id;
@@ -78,6 +88,8 @@ export interface Save {
   bonds?: Record<Id, Bond>;
   /** 대화에서 캐릭터가 부르는 플레이어 이름 (비우면 월드에 맞게 "당신") */
   playerName?: string;
+  /** 내 프로필: 이야기와 대화에 들어가는 플레이어 캐릭터 */
+  player?: PlayerProfile;
   createdAt: string;
   updatedAt: string;
 }

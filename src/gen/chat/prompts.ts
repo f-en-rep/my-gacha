@@ -40,6 +40,8 @@ export interface ChatPromptInput {
   character: Character;
   /** save.playerName (비었으면 중립적인 "당신") */
   playerName?: string;
+  /** 내 프로필의 소개·외형 (game/player formatPlayer, 이름 빼고). 비면 넣지 않는다 */
+  player?: string;
   /** 관계 태도 (core/bond bondStance) */
   stance: string;
   /** 호감도 단계 (1~10) */
@@ -86,7 +88,7 @@ export function chatSystemPrompt(input: ChatPromptInput, ctx?: PromptCtx): strin
     s.data('world', worldBlock(world, true)),
     `YOUR CHARACTER SHEET\n${s.data('sheet', sheet(c))}`,
     `YOUR RELATIONSHIP WITH THE PLAYER (bond level ${level}/10)\n${s.data('bond', stance)}`,
-    `THE PLAYER\n${player ? s.edit('playerNamed') : s.edit('playerUnnamed')}`,
+    `THE PLAYER\n${player ? s.edit('playerNamed') : s.edit('playerUnnamed')}${input.player?.trim() ? `\n${s.data('player', input.player.trim())}` : ''}`,
   ];
   if (storySoFar.trim()) {
     parts.push(`RECENT EVENTS (what you and the player have been through; you may refer to them)\n${s.data('story', storySoFar.trim())}`);

@@ -279,6 +279,8 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
       data('user', 'locations', '장소 목록'),
       data('user', 'story', '지금까지의 이야기', '최근 4챕터는 요약 전체, 그 전은 한 줄씩'),
       edit('user', 'storyNone', '첫 챕터일 때', 'Story so far: nothing yet — this is the very first chapter.', '이야기가 아직 없을 때 "지금까지의 이야기" 대신'),
+      data('user', 'lore', '알려진 인물·물건', '기록 패널의 인물·물건 (최근 것부터, 개수 제한). 있을 때만'),
+      data('user', 'player', '플레이어', '내 프로필의 이름·소개·외형. 있을 때만'),
       edit('user', 'goal', '지시 · 첫 줄', 'Plan chapter {{chapter}}.'),
       edit('user', 'firstChapter', '지시 · 1챕터', '- This is chapter 1: introduce the premise of the starting scenario and the main situation the player is thrown into.', '1챕터일 때'),
       edit(
@@ -333,6 +335,8 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
       task,
       data('user', 'world', '월드 정보 (짧게)'),
       data('user', 'story', '이전 챕터들', '최근 2챕터 요약'),
+      data('user', 'lore', '알려진 인물·물건', '기록 패널의 인물·물건 (최근 것부터, 개수 제한). 있을 때만'),
+      data('user', 'player', '플레이어', '내 프로필의 이름·소개·외형. 있을 때만'),
       data('user', 'chapter', '이번 챕터', '제목과 줄거리'),
       data('user', 'earlier', '이미 쓴 장면들'),
       edit('user', 'firstScene', '첫 장면일 때', 'This is the first scene of the chapter.'),
@@ -367,7 +371,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
   {
     id: 'story-finish',
     title: '스토리 · 챕터 요약',
-    description: '다 쓴 챕터를 요약하고, 다음 챕터가 참고할 한 줄 장부를 남겨요.',
+    description: '다 쓴 챕터를 요약하고, 다음 챕터가 참고할 한 줄 장부와 기록(사건·인물·물건)을 남겨요.',
     vars: [V.language, V.world, { name: 'chapter', desc: '챕터 번호' }],
     sections: [
       persona('You are the story editor of an anime-style gacha game. You write precise recaps that later writers rely on for continuity.'),
@@ -377,6 +381,8 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
       data('user', 'story', '이 챕터 전의 이야기'),
       data('user', 'chapter', '이번 챕터', '제목과 계획한 줄거리'),
       data('user', 'script', '챕터 대본 전체'),
+      data('user', 'cast', '캐스트 이름', '인물 기록에 넣지 않을 이름들. 캐스트가 있을 때만'),
+      data('user', 'known', '이미 있는 기록', '기록 패널의 인물·물건. 있을 때만'),
       edit(
         'user',
         'summaryRule',
@@ -390,8 +396,23 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
         '쓸 것 · 장부',
         '- ledger: ONE line stating what this chapter did to the overall arc (e.g. "X died; the alliance broke; the gate was found"). It will be used to keep periodic author directives on schedule, so mention any event a directive cares about.',
       ),
-      edit('user', 'langRule', '쓸 것 · 언어', '- Write both in {{language}}.'),
-      lock('user', 'shape', 'JSON 모양'),
+      edit('user', 'eventsRule', '쓸 것 · 사건', '- events: the 1–3 major events of this chapter, each with "name" (a short title) and "summary" (one or two short sentences).', '기록 패널 「사건」'),
+      edit(
+        'user',
+        'peopleRule',
+        '쓸 것 · 인물',
+        '- people: named characters who appeared in this chapter but are NOT in the cast list (allies, rivals, officials, family, villains …), each with "name" and "summary" (one line: who they are and their part so far). Repeat an already recorded person only if something new was learned, using the exact same name. [] if none.',
+        '기록 패널 「인물」. 캐스트 이름은 앱이 걸러 내요',
+      ),
+      edit(
+        'user',
+        'itemsRule',
+        '쓸 것 · 물건',
+        '- items: notable objects obtained, lost, used or sought in this chapter (artifacts, keys, documents, weapons …), each with "name" and "summary" (one line: what it is and where it stands now). Same-name rule as people. [] if none.',
+        '기록 패널 「물건」',
+      ),
+      edit('user', 'langRule', '쓸 것 · 언어', '- Write all text in {{language}}.'),
+      lock('user', 'shape', 'JSON 모양', '요약·장부·사건·인물·물건. 답을 이 모양으로 읽어요'),
     ],
   },
   {
@@ -425,6 +446,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
         'The player has no name set. Address them naturally in the second person (e.g. "{{you}}"); do not invent a name for them.',
         '"THE PLAYER" 아래',
       ),
+      data('system', 'player', '플레이어 프로필', '"THE PLAYER" 아래 내 프로필의 소개·외형. 있을 때만'),
       data('system', 'story', '최근 이야기', '플레이어가 다 읽은 최근 챕터 요약. 있을 때만'),
       edit(
         'system',

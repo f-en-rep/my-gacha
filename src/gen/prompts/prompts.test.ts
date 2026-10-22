@@ -21,12 +21,19 @@ function allVariants(ctxFor: (id: PromptId) => PromptCtx) {
   cardMessages(w, SAMPLE_CAST, SAMPLE_CARD, { askRarity: true }, ctxFor('card'));
   bannerMetaMessages(w, { featuredNames: ['아린'], brief: '여름' }, ctxFor('banner'));
   bannerMetaMessages(w, { featuredNames: [] }, ctxFor('banner'));
-  for (const chapterIndex of [1, 2]) planMessages({ world: w, cast: SAMPLE_CAST, locations: [], chapterIndex, nodeCount: 6, storySoFar: chapterIndex > 1 ? 'x' : '' }, ctxFor('story-plan'));
+  for (const chapterIndex of [1, 2])
+    planMessages(
+      { world: w, cast: SAMPLE_CAST, locations: [], chapterIndex, nodeCount: 6, storySoFar: chapterIndex > 1 ? 'x' : '', lore: 'People:\n- 노인', player: 'Name: 유리' },
+      ctxFor('story-plan'),
+    );
   for (const index of [0, 1, 2])
-    beatMessages({ world: w, chapter: ch, index, cast: index === 2 ? [] : SAMPLE_CAST, previousTail: index ? ['a'] : [], storySoFar: 'x' }, ctxFor('story-beat'));
-  finishMessages({ world: w, chapter: ch, scenes: [], storySoFar: 'x' }, ctxFor('story-finish'));
+    beatMessages(
+      { world: w, chapter: ch, index, cast: index === 2 ? [] : SAMPLE_CAST, previousTail: index ? ['a'] : [], storySoFar: 'x', lore: 'Items:\n- 열쇠', player: 'Name: 유리' },
+      ctxFor('story-beat'),
+    );
+  finishMessages({ world: w, chapter: ch, scenes: [], storySoFar: 'x', castNames: ['아린'], known: 'People:\n- 노인' }, ctxFor('story-finish'));
   for (const playerName of ['유리', undefined])
-    chatMessages({ world: w, character: SAMPLE_CAST[0]!, playerName, stance: 's', level: 1, storySoFar: 'x', history: SAMPLE_CHAT }, ctxFor('chat'));
+    chatMessages({ world: w, character: SAMPLE_CAST[0]!, playerName, player: 'Profile: 지휘관', stance: 's', level: 1, storySoFar: 'x', history: SAMPLE_CHAT }, ctxFor('chat'));
 }
 
 describe('프롬프트 목록', () => {
@@ -118,6 +125,40 @@ describe('고친 글', () => {
     await db.settings.put({ ...DEFAULT_SETTINGS, prompts: { chat: { persona: 'Hi {{char}}', style: '   ' }, 'story-beat': { shape: 'x' } } });
     expect(await promptCtx('chat')).toEqual({ overrides: { persona: 'Hi {{char}}' } });
     expect(await promptCtx('story-beat')).toEqual({});
+  });
+});
+
+describe('기록·내 프로필 자료', () => {
+  const planIn = { world: SAMPLE_WORLD, cast: SAMPLE_CAST, locations: SAMPLE_LOCATIONS, chapterIndex: 2, nodeCount: 6, storySoFar: 'x' };
+  const beatIn = { world: SAMPLE_WORLD, chapter: ch, index: 1, cast: SAMPLE_CAST, previousTail: ['a'], storySoFar: 'x' };
+  const chatIn = { world: SAMPLE_WORLD, character: SAMPLE_CAST[0]!, playerName: '유리', stance: '동료', level: 3, storySoFar: '', history: SAMPLE_CHAT };
+
+  it('비었으면 예전과 글자 하나까지 같다', () => {
+    expect(planMessages({ ...planIn, lore: '', player: '  ' })).toEqual(planMessages(planIn));
+    expect(beatMessages({ ...beatIn, lore: ' ', player: '' })).toEqual(beatMessages(beatIn));
+    expect(chatMessages({ ...chatIn, player: '' })).toEqual(chatMessages(chatIn));
+  });
+
+  it('있으면 자료 칸으로 들어간다', () => {
+    const lore = 'People:\n- 등대지기 노인: 결정의 비밀을 안다';
+    const player = 'Name: 유리\nProfile: 새로 부임한 지휘관';
+    const plan = planMessages({ ...planIn, lore, player })[1]!.content;
+    expect(plan).toContain(`Story so far:\nx\n\nKnown people and items from earlier chapters (not cast members; keep them consistent and reuse the names exactly):\n${lore}\n\nThe player character (the protagonist):\n${player}\n\n`);
+    const beat = beatMessages({ ...beatIn, lore, player })[1]!.content;
+    expect(beat).toContain(`Previous chapters:\nx\n\nKnown people`);
+    expect(beat).toContain(`The player character (the protagonist):\n${player}\n\nThis chapter`);
+    const chat = chatMessages({ ...chatIn, player: 'Profile: 새로 부임한 지휘관' })[0]!.content;
+    expect(chat).toContain('THE PLAYER\nThe player\'s name is "유리". Call them by that name when it feels natural.\nProfile: 새로 부임한 지휘관\n\n');
+  });
+
+  it('마무리: 캐스트 이름과 이미 있는 기록, 고정된 JSON 모양', () => {
+    const out = finishMessages({ world: SAMPLE_WORLD, chapter: ch, scenes: [], storySoFar: '', castNames: ['아린', '세레나'], known: 'Items:\n- 열쇠' })[1]!.content;
+    expect(out).toContain('Cast members (the playable characters — never list them under "people"):\n아린, 세레나');
+    expect(out).toContain('Already recorded people and items:\nItems:\n- 열쇠');
+    expect(out).toContain('"people": [{"name": "...", "summary": "..."}]');
+    const hacked = finishMessages({ world: SAMPLE_WORLD, chapter: ch, scenes: [], storySoFar: '' }, { overrides: { shape: 'x', peopleRule: '- people: villains only.' } })[1]!.content;
+    expect(hacked).toContain('- people: villains only.');
+    expect(hacked).toContain('"items": [');
   });
 });
 

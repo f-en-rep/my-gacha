@@ -1,6 +1,8 @@
 // 프롬프트 미리 보기: 지금 월드(없으면 예시 데이터)로 실제 메시지를 만들고, 칸마다 들어간 글을 기록한다.
 import type { ChatMessage } from '../text';
-import type { Chapter, Character, ChatLine, Location, World } from '../../types';
+import type { Chapter, Character, ChatLine, Location, LoreEntry, PlayerProfile, World } from '../../types';
+import { formatKnownLore } from '../../game/lore';
+import { formatPlayer } from '../../game/player';
 import { bondStance } from '../../core/bond';
 import { bannerMetaMessages, cardMessages, characterMessages, setupMessages } from '../world/prompts';
 import { beatMessages, finishMessages, formatStorySoFar, planMessages } from '../story/prompts';
@@ -17,6 +19,10 @@ export interface PreviewData {
   locations: Location[];
   history: ChatLine[];
   playerName?: string;
+  /** 내 프로필 (플레이 중인 세이브) */
+  player?: PlayerProfile;
+  /** 기록 (인물·물건이 계획·장면·마무리에 들어간다) */
+  lore?: LoreEntry[];
   /** 예시 데이터인지 */
   sample: boolean;
 }
@@ -47,6 +53,8 @@ export function previewMessages(id: PromptId, overrides: SectionOverrides | unde
   const ctx = { overrides, trace };
   const { world, cast } = d;
   const lead = cast[0];
+  const lore = formatKnownLore(d.lore ?? []);
+  const me = { playerName: d.playerName, player: d.player };
   const messages = ((): ChatMessage[] => {
     switch (id) {
       case 'world-setup':
@@ -59,7 +67,7 @@ export function previewMessages(id: PromptId, overrides: SectionOverrides | unde
         return bannerMetaMessages(world, { featuredNames: cast.slice(0, 2).map((c) => c.name) }, ctx);
       case 'story-plan':
         return planMessages(
-          { world, cast, locations: d.locations, chapterIndex: d.chapters.length + 1, nodeCount: NODES, storySoFar: formatStorySoFar(d.chapters, 4) },
+          { world, cast, locations: d.locations, chapterIndex: d.chapters.length + 1, nodeCount: NODES, storySoFar: formatStorySoFar(d.chapters, 4), lore, player: formatPlayer(me) },
           ctx,
         );
       case 'story-beat': {
@@ -75,6 +83,8 @@ export function previewMessages(id: PromptId, overrides: SectionOverrides | unde
             location: d.locations.find((l) => l.id === node.locationId) ?? d.locations[0],
             previousTail: index > 0 ? ['(이전 장면의 마지막 몇 줄)'] : [],
             storySoFar: formatStorySoFar(d.chapters.filter((c) => c.index < chapter.index), 2),
+            lore,
+            player: formatPlayer(me),
           },
           ctx,
         );
@@ -87,6 +97,8 @@ export function previewMessages(id: PromptId, overrides: SectionOverrides | unde
             chapter,
             scenes: chapter.nodes.map((n) => ({ title: n.title, lines: ['(이 장면의 대본)'] })),
             storySoFar: formatStorySoFar(d.chapters.filter((c) => c.index < chapter.index), 2),
+            castNames: cast.map((c) => c.name),
+            known: lore,
           },
           ctx,
         );
@@ -94,7 +106,7 @@ export function previewMessages(id: PromptId, overrides: SectionOverrides | unde
       case 'chat': {
         const c = lead ?? SAMPLE_CAST[0]!;
         return chatMessages(
-          { world, character: c, playerName: d.playerName, stance: bondStance(1), level: 1, storySoFar: formatStorySoFar(d.chapters, 2), history: d.history },
+          { world, character: c, playerName: d.playerName, player: formatPlayer(me, { name: false }), stance: bondStance(1), level: 1, storySoFar: formatStorySoFar(d.chapters, 2), history: d.history },
           ctx,
         );
       }

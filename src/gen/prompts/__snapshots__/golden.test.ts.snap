@@ -810,10 +810,13 @@ Full script of the chapter:
 Write:
 - summary: 5–8 sentences. What actually happened (as written, not as planned), who changed and how (relationships, injuries, deaths, revelations, decisions), and open threads. Use character names.
 - ledger: ONE line stating what this chapter did to the overall arc (e.g. "X died; the alliance broke; the gate was found"). It will be used to keep periodic author directives on schedule, so mention any event a directive cares about.
-- Write both in Korean (한국어).
+- events: the 1–3 major events of this chapter, each with "name" (a short title) and "summary" (one or two short sentences).
+- people: named characters who appeared in this chapter but are NOT in the cast list (allies, rivals, officials, family, villains …), each with "name" and "summary" (one line: who they are and their part so far). Repeat an already recorded person only if something new was learned, using the exact same name. [] if none.
+- items: notable objects obtained, lost, used or sought in this chapter (artifacts, keys, documents, weapons …), each with "name" and "summary" (one line: what it is and where it stands now). Same-name rule as people. [] if none.
+- Write all text in Korean (한국어).
 
 Reply with JSON:
-{"summary": "...", "ledger": "..."}",
+{"summary": "...", "ledger": "...", "events": [{"name": "...", "summary": "..."}], "people": [{"name": "...", "summary": "..."}], "items": [{"name": "...", "summary": "..."}]}",
     "role": "user",
   },
 ]
@@ -851,10 +854,13 @@ Full script of the chapter:
 Write:
 - summary: 5–8 sentences. What actually happened (as written, not as planned), who changed and how (relationships, injuries, deaths, revelations, decisions), and open threads. Use character names.
 - ledger: ONE line stating what this chapter did to the overall arc (e.g. "X died; the alliance broke; the gate was found"). It will be used to keep periodic author directives on schedule, so mention any event a directive cares about.
-- Write both in Korean (한국어).
+- events: the 1–3 major events of this chapter, each with "name" (a short title) and "summary" (one or two short sentences).
+- people: named characters who appeared in this chapter but are NOT in the cast list (allies, rivals, officials, family, villains …), each with "name" and "summary" (one line: who they are and their part so far). Repeat an already recorded person only if something new was learned, using the exact same name. [] if none.
+- items: notable objects obtained, lost, used or sought in this chapter (artifacts, keys, documents, weapons …), each with "name" and "summary" (one line: what it is and where it stands now). Same-name rule as people. [] if none.
+- Write all text in Korean (한국어).
 
 Reply with JSON:
-{"summary": "...", "ledger": "..."}",
+{"summary": "...", "ledger": "...", "events": [{"name": "...", "summary": "..."}], "people": [{"name": "...", "summary": "..."}], "items": [{"name": "...", "summary": "..."}]}",
     "role": "user",
   },
 ]

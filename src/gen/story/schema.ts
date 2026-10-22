@@ -241,10 +241,44 @@ export function beatSchema(): ZodType<SegmentDraft[]> {
 
 // ---------- 챕터 마무리 ----------
 
+/** 기록 한 줄 (사건 제목·인물 이름·물건 이름 + 한두 줄) */
+export interface LoreLine {
+  name: string;
+  summary: string;
+}
+
 export interface FinishDraft {
   summary: string;
   ledger: string;
+  events: LoreLine[];
+  people: LoreLine[];
+  items: LoreLine[];
 }
+
+/** 기록 목록 읽기. 없거나 틀려도 실패로 보지 않는다 (요약이 더 중요하다). 문자열이면 "이름: 설명"으로 */
+function readLore(v: unknown, max: number): LoreLine[] {
+  const list = Array.isArray(v) ? v : isObj(v) ? Object.entries(v).map(([name, summary]) => ({ name, summary })) : [];
+  const out: LoreLine[] = [];
+  for (const item of list) {
+    let name = '';
+    let summary = '';
+    if (isObj(item)) {
+      name = looseStr(pick(item, 'name', 'title', 'event', 'person', 'item'));
+      summary = looseStr(pick(item, 'summary', 'description', 'desc', 'note', 'details', 'role'));
+    } else if (typeof item === 'string') {
+      const m = /^\s*([^:：—-]{1,60})\s*[:：—-]\s*(.+)$/.exec(item);
+      name = m ? m[1]!.trim() : item.trim();
+      summary = m ? m[2]!.trim() : '';
+    }
+    if (!name) continue;
+    if (!out.some((o) => normName(o.name) === normName(name))) out.push({ name, summary });
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+/** 챕터 하나에서 받는 기록 수 상한 */
+export const LORE_PER_CHAPTER = { events: 3, people: 8, items: 8 } as const;
 
 export function finishSchema(): ZodType<FinishDraft> {
   return asSchema(
@@ -254,7 +288,13 @@ export function finishSchema(): ZodType<FinishDraft> {
       const ledger = looseStr(pick(obj, 'ledger', 'arc', 'arcLine', 'ledgerLine', 'oneLine')).replace(/\s*\n+\s*/g, ' ');
       if (!summary) issue(ctx, ['summary'], 'missing summary');
       if (!ledger) issue(ctx, ['ledger'], 'missing ledger line');
-      return { summary, ledger };
+      return {
+        summary,
+        ledger,
+        events: readLore(pick(obj, 'events', 'majorEvents', 'event'), LORE_PER_CHAPTER.events),
+        people: readLore(pick(obj, 'people', 'persons', 'characters', 'npcs', 'person'), LORE_PER_CHAPTER.people),
+        items: readLore(pick(obj, 'items', 'objects', 'item'), LORE_PER_CHAPTER.items),
+      };
     }),
   );
 }

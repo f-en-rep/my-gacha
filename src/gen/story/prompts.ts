@@ -87,6 +87,18 @@ export interface PlanPromptInput {
   chapterIndex: number;
   nodeCount: number;
   storySoFar: string;
+  /** 알려진 인물·물건 (game/lore formatKnownLore). 비면 넣지 않는다 */
+  lore?: string;
+  /** 플레이어 (game/player formatPlayer). 비면 넣지 않는다 */
+  player?: string;
+}
+
+/** 기록·플레이어 머리말 (비었으면 아무것도 넣지 않아 예전 프롬프트와 같다) */
+function loreAndPlayer(s: ReturnType<typeof sectionsOf>, lore: string | undefined, player: string | undefined): string[] {
+  const out: string[] = [];
+  if (lore?.trim()) out.push(`Known people and items from earlier chapters (not cast members; keep them consistent and reuse the names exactly):\n${s.data('lore', lore.trim())}`);
+  if (player?.trim()) out.push(`The player character (the protagonist):\n${s.data('player', player.trim())}`);
+  return out;
 }
 
 export function planMessages(input: PlanPromptInput, ctx?: PromptCtx): ChatMessage[] {
@@ -107,6 +119,7 @@ export function planMessages(input: PlanPromptInput, ctx?: PromptCtx): ChatMessa
     `${s.lock('castRule', 'Cast (the ONLY named characters you may use; use the names exactly as written):')}\n${s.data('cast', cast.map(castPlanLine).join('\n') || '(none)')}`,
     `Existing locations:\n${s.data('locations', locs)}`,
     storySoFar ? `Story so far:\n${s.data('story', storySoFar)}` : s.edit('storyNone'),
+    ...loreAndPlayer(s, input.lore, input.player),
     [
       s.edit('goal'),
       chapterIndex === 1 ? s.edit('firstChapter') : s.edit('continue'),
@@ -141,6 +154,8 @@ export interface BeatPromptInput {
   /** 이전 장면의 마지막 몇 토막 (대본 한 줄씩) */
   previousTail: string[];
   storySoFar: string;
+  lore?: string;
+  player?: string;
 }
 
 export function beatMessages(input: BeatPromptInput, ctx?: PromptCtx): ChatMessage[] {
@@ -164,6 +179,7 @@ export function beatMessages(input: BeatPromptInput, ctx?: PromptCtx): ChatMessa
     s.lock('task', `[task: story-beat chapter=${chapter.index} scene=${index + 1}/${chapter.nodes.length}]`),
     s.data('world', worldBlock(world, true)),
     storySoFar ? `Previous chapters:\n${s.data('story', storySoFar)}` : '',
+    ...loreAndPlayer(s, input.lore, input.player),
     s.data('chapter', `This chapter (Ch.${chapter.index}): "${chapter.title}"\nSynopsis: ${chapter.synopsis}`),
     earlier.length ? `Scenes already written in this chapter:\n${s.data('earlier', earlier.join('\n'))}` : s.edit('firstScene'),
     previousTail.length ? `${s.edit('tailIntro')}\n${s.data('tail', previousTail.join('\n'))}` : '',
@@ -202,6 +218,10 @@ export interface FinishPromptInput {
   /** 장면별 대본 */
   scenes: { title: string; lines: string[] }[];
   storySoFar: string;
+  /** 캐스트 이름 (인물 기록에서 뺄 이름) */
+  castNames?: string[];
+  /** 이미 있는 인물·물건 기록 (game/lore formatKnownLore) */
+  known?: string;
 }
 
 export function finishMessages(input: FinishPromptInput, ctx?: PromptCtx): ChatMessage[] {
@@ -217,8 +237,13 @@ export function finishMessages(input: FinishPromptInput, ctx?: PromptCtx): ChatM
     storySoFar ? `Story before this chapter:\n${s.data('story', storySoFar)}` : '',
     s.data('chapter', `Chapter ${chapter.index}: "${chapter.title}"\nPlanned synopsis: ${chapter.synopsis}`),
     `Full script of the chapter:\n${s.data('script', script)}`,
-    ['Write:', s.edit('summaryRule'), s.edit('ledgerRule'), s.edit('langRule')].join('\n'),
-    s.lock('shape', 'Reply with JSON:\n{"summary": "...", "ledger": "..."}'),
+    input.castNames?.length ? `Cast members (the playable characters — never list them under "people"):\n${s.data('cast', input.castNames.join(', '))}` : '',
+    input.known?.trim() ? `Already recorded people and items:\n${s.data('known', input.known.trim())}` : '',
+    ['Write:', s.edit('summaryRule'), s.edit('ledgerRule'), s.edit('eventsRule'), s.edit('peopleRule'), s.edit('itemsRule'), s.edit('langRule')].join('\n'),
+    s.lock(
+      'shape',
+      'Reply with JSON:\n{"summary": "...", "ledger": "...", "events": [{"name": "...", "summary": "..."}], "people": [{"name": "...", "summary": "..."}], "items": [{"name": "...", "summary": "..."}]}',
+    ),
   ]
     .filter(Boolean)
     .join('\n\n');

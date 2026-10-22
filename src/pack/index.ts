@@ -11,11 +11,13 @@
 //   story/chapters/<id>.json   Chapter   (스토리 포함일 때, 백업은 항상)
 //   story/beats/<id>.json      Beat
 //   story/locations/<id>.json  Location
+//   story/lore/<id>.json       LoreEntry (기록: 사건·인물·물건. 스토리와 함께)
 //   saves/<id>.json        Save            (백업만)
 //   pulls.json             PullRecord[]    (백업만)
 //   chats.json             ChatLine[]      (백업만. 세이브의 호감도 bonds는 saves/ 안에)
 //
-// 가져올 때는 월드·캐릭터·배너·그림·챕터·장면·장소·세이브 id를 전부 새로 만들고 참조를 바꿔 끼운다.
+// 알림(notices)은 이 기기만의 기록이라 어디에도 넣지 않는다.
+// 가져올 때는 월드·캐릭터·배너·그림·챕터·장면·장소·기록·세이브 id를 전부 새로 만들고 참조를 바꿔 끼운다.
 // 그래서 같은 팩을 두 번 가져와도 서로 다른 월드가 된다.
 import { strToU8, strFromU8, unzipSync, zipSync, type Zippable } from 'fflate';
 import type { ZodType, ZodTypeDef } from 'zod';
@@ -32,6 +34,7 @@ import {
   type Character,
   type Id,
   type Location,
+  type LoreEntry,
   type PullRecord,
   type Save,
   type World,
@@ -46,6 +49,7 @@ import {
   characterSchema,
   chatsFileSchema,
   locationSchema,
+  loreSchema,
   manifestSchema,
   pullsFileSchema,
   saveSchema,
@@ -114,21 +118,23 @@ interface WorldData {
   chapters: Chapter[];
   beats: Beat[];
   locations: Location[];
+  lore: LoreEntry[];
 }
 
 async function collectWorld(worldId: Id): Promise<WorldData> {
   const world = await db.worlds.get(worldId);
   if (!world) throw new PackError('월드를 찾을 수 없습니다.');
   if (world.status !== 'ready') throw new PackError('생성이 끝난 월드만 내보낼 수 있습니다.');
-  const [characters, banners, assets, chapters, beats, locations] = await Promise.all([
+  const [characters, banners, assets, chapters, beats, locations, lore] = await Promise.all([
     db.characters.where('worldId').equals(worldId).toArray(),
     db.banners.where('worldId').equals(worldId).toArray(),
     db.assets.where('worldId').equals(worldId).toArray(),
     db.chapters.where('worldId').equals(worldId).toArray(),
     db.beats.where('worldId').equals(worldId).toArray(),
     db.locations.where('worldId').equals(worldId).toArray(),
+    db.lore.where('worldId').equals(worldId).toArray(),
   ]);
-  return { world, characters, banners, assets, chapters, beats, locations };
+  return { world, characters, banners, assets, chapters, beats, locations, lore };
 }
 
 async function worldEntries(d: WorldData, format: string, opts: ExportOptions, saveCount?: number): Promise<Zippable> {
@@ -170,7 +176,7 @@ async function worldEntries(d: WorldData, format: string, opts: ExportOptions, s
     characters: d.characters.length,
     images,
     ...(saveCount !== undefined && { saves: saveCount }),
-    ...(story && { story: { chapters: d.chapters.length, beats: d.beats.length, locations: d.locations.length } }),
+    ...(story && { story: { chapters: d.chapters.length, beats: d.beats.length, locations: d.locations.length, lore: d.lore.length } }),
   };
   files['manifest.json'] = json(manifest);
   files['world.json'] = json(worldFile);
@@ -180,6 +186,7 @@ async function worldEntries(d: WorldData, format: string, opts: ExportOptions, s
     for (const c of d.chapters) files[`story/chapters/${safeName(c.id)}.json`] = json(c);
     for (const b of d.beats) files[`story/beats/${safeName(b.id)}.json`] = json(b);
     for (const l of d.locations) files[`story/locations/${safeName(l.id)}.json`] = json(l);
+    for (const e of d.lore) files[`story/lore/${safeName(e.id)}.json`] = json(e);
   }
   return files;
 }
@@ -394,6 +401,7 @@ interface Prepared {
   chapters: Chapter[];
   beats: Beat[];
   locations: Location[];
+  lore: LoreEntry[];
   charMap: Map<string, string>;
   bannerMap: Map<string, string>;
   chapterMap: Map<string, string>;
@@ -509,6 +517,18 @@ async function prepareWorld(files: Files, manifest: Manifest, name: string): Pro
     });
   }
 
+  // 기록: 챕터·캐스트 참조를 바꿔 끼운다 (없는 챕터면 챕터 표시만 뺀다)
+  const loreIds = new Set<string>();
+  const lore: LoreEntry[] = listJson(files, 'story/lore/').map((n) => {
+    const e = parseJson(files, n, loreSchema);
+    if (loreIds.has(e.id)) throw new PackError(`기록 id가 겹칩니다: ${n}`);
+    loreIds.add(e.id);
+    const { chapterId: oldChapter, castIds, ...rest } = e;
+    const chapterId = oldChapter ? chapterMap.get(oldChapter) : undefined;
+    const cast = castIds ? mapChars(castIds) : [];
+    return { ...rest, id: newId('lore_'), worldId, ...(chapterId && { chapterId }), ...(cast.length && { castIds: cast }) };
+  });
+
   const { id: _old, ...rest } = wf;
   const world: World = {
     ...rest,
@@ -518,12 +538,12 @@ async function prepareWorld(files: Files, manifest: Manifest, name: string): Pro
     importedFrom: { packName: name, importedAt: t },
     updatedAt: t,
   };
-  return { world, characters, banners, assets, chapters, beats, locations, charMap, bannerMap, chapterMap };
+  return { world, characters, banners, assets, chapters, beats, locations, lore, charMap, bannerMap, chapterMap };
 }
 
 /** 전부 한 트랜잭션으로. 중간에 실패하면 아무것도 남지 않는다 */
 async function writeAll(p: Prepared, saves: Save[], pulls: PullRecord[], chats: ChatLine[]): Promise<void> {
-  const tables = [db.worlds, db.characters, db.banners, db.assets, db.saves, db.pulls, db.chapters, db.beats, db.locations, db.chatLines];
+  const tables = [db.worlds, db.characters, db.banners, db.assets, db.saves, db.pulls, db.chapters, db.beats, db.locations, db.chatLines, db.lore];
   await db.transaction('rw', tables, async () => {
     await db.worlds.add(p.world);
     await db.characters.bulkAdd(p.characters);
@@ -532,6 +552,7 @@ async function writeAll(p: Prepared, saves: Save[], pulls: PullRecord[], chats: 
     if (p.locations.length) await db.locations.bulkAdd(p.locations);
     if (p.chapters.length) await db.chapters.bulkAdd(p.chapters);
     if (p.beats.length) await db.beats.bulkAdd(p.beats);
+    if (p.lore.length) await db.lore.bulkAdd(p.lore);
     await db.saves.bulkAdd(saves);
     if (pulls.length) await db.pulls.bulkAdd(pulls);
     if (chats.length) await db.chatLines.bulkAdd(chats);

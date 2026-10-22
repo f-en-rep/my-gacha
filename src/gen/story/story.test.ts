@@ -298,6 +298,111 @@ describe('finishChapter', () => {
   });
 });
 
+describe('기록 (사건·인물·물건)', () => {
+  const finishReply = (extra: object) => ({ summary: '요약', ledger: '장부', ...extra });
+
+  it('챕터를 마치면 기록이 쌓이고, 캐스트는 인물로 넣지 않는다', async () => {
+    await makeChapter(1, { title: '첫날' });
+    install((text) =>
+      text.includes('[task: story-beat')
+        ? beatReply()
+        : finishReply({
+            events: [{ name: '결정의 균열', summary: '아린이 결정의 금을 발견했다.' }, '경보: 섬 전체에 경보가 울렸다', { name: '' }],
+            people: [{ name: '등대지기 노인', summary: '섬 끝 등대를 지키는 노인' }, { name: '아린', summary: '캐스트' }, { name: '세레나 씨', summary: '캐스트' }, { name: '아린의 어머니', summary: '다른 사람' }],
+            items: { '낡은 열쇠': '결정실 문을 여는 열쇠' },
+          }),
+    );
+    await ensureBeat('ch1', 0);
+    await finishChapter('ch1');
+    expect(prompts[1]!.text).toContain('Cast members (the playable characters — never list them under "people"):\n아린, 세레나, 카이');
+    const lore = await db.lore.where('worldId').equals('w1').toArray();
+    const names = (k: string) => lore.filter((e) => e.kind === k).map((e) => e.name).sort();
+    expect(names('event')).toEqual(['결정의 균열', '경보']);
+    expect(names('person')).toEqual(['등대지기 노인', '아린의 어머니']);
+    expect(names('item')).toEqual(['낡은 열쇠']);
+    const crack = lore.find((e) => e.name === '결정의 균열')!;
+    expect(crack).toMatchObject({ chapterId: 'ch1', chapterIndex: 1, source: 'story', castIds: ['c1'] });
+  });
+
+  it('같은 이름은 고쳐 쓰고, 직접 적은 기록은 덮어쓰지 않는다. 다음 계획·장면에 들어간다', async () => {
+    await db.lore.bulkPut([
+      { id: 'lo1', worldId: 'w1', kind: 'person', name: '등대지기 노인', summary: '옛 설명', chapterIndex: 1, source: 'story', createdAt: T, updatedAt: T },
+      { id: 'lo2', worldId: 'w1', kind: 'item', name: '낡은 열쇠', summary: '내가 적은 설명', source: 'manual', createdAt: T, updatedAt: T },
+    ]);
+    await makeChapter(1, { status: 'complete', summary: 's1', ledger: 'l1' });
+    await makeChapter(2);
+    install((text) =>
+      text.includes('[task: story-beat')
+        ? beatReply()
+        : finishReply({ people: [{ name: '등대지기  노인', summary: '사실은 전직 수비대장' }], items: [{ name: '낡은 열쇠!', summary: '덮어쓰면 안 됨' }] }),
+    );
+    await ensureBeat('ch2', 0);
+    expect(prompts[0]!.text).toContain('Known people and items from earlier chapters (not cast members; keep them consistent and reuse the names exactly):\nPeople:\n- 등대지기 노인: 옛 설명\nItems:\n- 낡은 열쇠: 내가 적은 설명');
+    await finishChapter('ch2');
+    expect(prompts[1]!.text).toContain('Already recorded people and items:\nPeople:\n- 등대지기 노인');
+    const lore = await db.lore.where('worldId').equals('w1').toArray();
+    expect(lore).toHaveLength(2);
+    expect(lore.find((e) => e.id === 'lo1')!.summary).toBe('사실은 전직 수비대장');
+    expect(lore.find((e) => e.id === 'lo2')!.summary).toBe('내가 적은 설명');
+  });
+
+  it('기록·프로필이 없으면 프롬프트에 그 자리가 없다. 플레이 중인 세이브의 프로필은 들어간다', async () => {
+    install((text) => (text.includes('[task: story-plan') ? planReply() : beatReply()));
+    await planNextChapter('w1');
+    expect(prompts[0]!.text).not.toContain('Known people');
+    expect(prompts[0]!.text).not.toContain('The player character');
+    await db.saves.put({ ...(await import('../../game/store')).newSave('w1'), id: 's1', playerName: '유리', player: { profile: '새 지휘관', imageTags: '1girl' } });
+    await db.settings.put({ ...DEFAULT_SETTINGS, routing: { structured: 'p1' }, activeWorldId: 'w1', activeSaveId: 's1' });
+    const id = (await db.chapters.toArray())[0]!.id;
+    await ensureBeat(id, 0);
+    expect(prompts[1]!.text).toContain('The player character (the protagonist):\nName: 유리\nProfile: 새 지휘관\n\n');
+    expect(prompts[1]!.text).not.toContain('1girl, ');
+  });
+});
+
+describe('알림', () => {
+  it('뒤에서 쓰다 실패하면 남기고, 같은 실패는 한 줄로 합친다. 멈춘 것은 남기지 않는다', async () => {
+    await makeChapter(1);
+    install(() => {
+      throw new Error('요청이 너무 많습니다 (429)');
+    });
+    await expect(ensureBeat('ch1', 0)).rejects.toThrow('429');
+    await expect(ensureBeat('ch1', 0)).rejects.toThrow('429');
+    let list = await db.notices.toArray();
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ kind: 'error', job: 'story-beat', count: 2, link: '/story/ch1', worldId: 'w1', detail: '요청이 너무 많습니다 (429)' });
+
+    const ctrl = new AbortController();
+    mockGen.mockImplementation(async (_p, _m, _s, opts) => {
+      await new Promise((r) => setTimeout(r, 5));
+      opts?.signal?.throwIfAborted();
+      return { value: [], raw: '', attempts: 1 } as never;
+    });
+    const p = ensureBeat('ch1', 1, { signal: ctrl.signal });
+    ctrl.abort();
+    await expect(p).rejects.toBeTruthy();
+    await new Promise((r) => setTimeout(r, 20));
+    list = await db.notices.toArray();
+    expect(list).toHaveLength(1);
+
+    install((text) => (text.includes('[task: story-beat') ? beatReply() : { summary: 's', ledger: 'l' }));
+    await ensureBeat('ch1', 0);
+    await new Promise((r) => setTimeout(r, 5));
+    expect((await db.notices.get(list[0]!.id))!.readAt).toBeTruthy();
+  });
+
+  it('챕터 정리 실패도 남는다', async () => {
+    await makeChapter(1);
+    install((text) => {
+      if (text.includes('[task: story-beat')) return beatReply();
+      throw new Error('정리 실패');
+    });
+    await ensureBeat('ch1', 0);
+    await expect(finishChapter('ch1')).rejects.toThrow('정리 실패');
+    expect(await db.notices.toArray()).toMatchObject([{ job: 'story-finish', title: '1장 챕터를 정리하지 못했어요 (요약·기록)' }]);
+  });
+});
+
 describe('schema helpers', () => {
   it('긴 지문을 220자 이하로 나눈다', () => {
     const long = Array.from({ length: 30 }, (_, i) => `문장 번호 ${i}입니다.`).join(' ');
