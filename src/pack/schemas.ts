@@ -129,6 +129,7 @@ export const saveSchema = z.object({
       z.object({
         beat: z.number().int().nonnegative(),
         segment: z.number().int().nonnegative(),
+        furthest: z.number().int().nonnegative().optional(),
         clearedAt: iso.optional(),
       }),
     )

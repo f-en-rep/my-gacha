@@ -209,7 +209,8 @@ function ChapterDetail({ chapter, save, world }: { chapter: Chapter; save: Save;
   // 한 번이라도 닿은 장면은 계속 보인다: 다 읽음, 지금 위치까지, 또는 본문이 이미 쓰인 장면 ("처음부터"로 돌아가도 숨기지 않는다)
   const written = useBeats(chapter.id);
   const writtenSet = new Set((written ?? []).map((b) => b.index));
-  const reached = (i: number) => cleared || (!!p && i <= p.beat) || writtenSet.has(i);
+  // 미리 써 둔 다음 장면은 아직 안 간 곳이라 furthest를 먼저 본다. furthest가 없는 예전 세이브만 써진 장면으로 짐작
+  const reached = (i: number) => cleared || (!!p && i <= Math.max(p.beat, p.furthest ?? -1)) || (p?.furthest === undefined && writtenSet.has(i));
 
   const open = (fresh: boolean) => openChapter(chapter.id, p, fresh);
 

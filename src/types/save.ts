@@ -44,6 +44,8 @@ export interface StoryProgress {
   beat: number;
   /** 그 장면 안의 토막 인덱스 (이어 읽기) */
   segment: number;
+  /** 가장 멀리 간 장면. "처음부터"로 돌아가도 그 장면까지는 제목을 보여 준다 */
+  furthest?: number;
   /** 끝까지 읽은 시각. 처음 다 읽을 때 보상을 준다 */
   clearedAt?: string;
 }

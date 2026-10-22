@@ -23,7 +23,7 @@ describe('처음부터 다시 읽기', () => {
     // "처음부터": 위치만 0으로
     await setStoryProgress(saveId, 'ch1', 0, 0);
     let s = (await db.saves.get(saveId))!;
-    expect(s.story!.ch1).toEqual({ beat: 0, segment: 0, clearedAt });
+    expect(s.story!.ch1).toEqual({ beat: 0, segment: 0, furthest: 5, clearedAt });
 
     expect(await clearChapter(saveId, 'ch1')).toBe(false);
     s = (await db.saves.get(saveId))!;
