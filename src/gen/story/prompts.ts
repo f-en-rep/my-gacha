@@ -4,21 +4,8 @@ import type { ChatMessage } from '../text';
 import type { Chapter, Character, Location, Segment, World } from '../../types';
 import { languageName } from '../world/prompts';
 import { MAX_NARRATION_CHARS, SEGMENT_LIMITS } from './schema';
-
-const JSON_ONLY = 'Always answer with a single JSON object only — no explanations, no markdown, no code fences.';
-
-const SYSTEM_PLANNER =
-  'You are the head writer of an anime-style gacha game (think Arknights) planning its main story chapter by chapter. ' +
-  'You keep long-running continuity, honour the author directives exactly, and give every chapter a clear shape. ' +
-  JSON_ONLY;
-
-const SYSTEM_WRITER =
-  'You are the scenario writer of an anime-style gacha game, writing visual-novel scenes (think Arknights or Blue Archive story mode). ' +
-  'Your prose is vivid but easy to read on a phone, characters sound like themselves, and every scene moves the story. ' +
-  JSON_ONLY;
-
-const SYSTEM_EDITOR =
-  'You are the story editor of an anime-style gacha game. You write precise recaps that later writers rely on for continuity. ' + JSON_ONLY;
+import { JSON_ONLY, promptTemplate } from '../prompts/registry';
+import { sectionsOf, type PromptCtx } from '../prompts/template';
 
 /** 첫 문장 (최대 max 글자) */
 export function firstSentence(text: string, max = 100): string {
@@ -88,6 +75,11 @@ export function segmentLine(s: Segment, nameOf: (s: Segment) => string): string 
 
 // ---------- 챕터 계획 ----------
 
+/** 시스템 글: 고칠 수 있는 역할 + 고정된 JSON 지시 */
+function systemOf(s: ReturnType<typeof sectionsOf>): ChatMessage {
+  return { role: 'system', content: `${s.edit('persona')} ${s.lock('jsonOnly', JSON_ONLY)}` };
+}
+
 export interface PlanPromptInput {
   world: World;
   cast: Character[];
@@ -97,37 +89,45 @@ export interface PlanPromptInput {
   storySoFar: string;
 }
 
-export function planMessages(input: PlanPromptInput): ChatMessage[] {
+export function planMessages(input: PlanPromptInput, ctx?: PromptCtx): ChatMessage[] {
   const { world, cast, locations, chapterIndex, nodeCount, storySoFar } = input;
-  const lang = languageName(world.language);
   const halfCast = Math.max(2, Math.ceil(cast.length / 2));
+  const s = sectionsOf(promptTemplate('story-plan'), ctx, {
+    language: languageName(world.language),
+    world: world.name,
+    chapter: chapterIndex,
+    nodes: nodeCount,
+    halfCast,
+  });
+  const system = systemOf(s);
   const locs = locations.length ? locations.map((l) => `- ${l.name}: ${firstSentence(l.description, 120)}`).join('\n') : '(none yet)';
   const user = [
-    `[task: story-plan chapter=${chapterIndex}]`,
-    worldBlock(world),
-    `Cast (the ONLY named characters you may use; use the names exactly as written):\n${cast.map(castPlanLine).join('\n') || '(none)'}`,
-    `Existing locations:\n${locs}`,
-    storySoFar ? `Story so far:\n${storySoFar}` : 'Story so far: nothing yet — this is the very first chapter.',
+    s.lock('task', `[task: story-plan chapter=${chapterIndex}]`),
+    s.data('world', worldBlock(world)),
+    `${s.lock('castRule', 'Cast (the ONLY named characters you may use; use the names exactly as written):')}\n${s.data('cast', cast.map(castPlanLine).join('\n') || '(none)')}`,
+    `Existing locations:\n${s.data('locations', locs)}`,
+    storySoFar ? `Story so far:\n${s.data('story', storySoFar)}` : s.edit('storyNone'),
     [
-      `Plan chapter ${chapterIndex}.`,
-      chapterIndex === 1
-        ? '- This is chapter 1: introduce the premise of the starting scenario and the main situation the player is thrown into.'
-        : `- Continue directly from the story so far. Keep continuity: what happened stays happened, the dead stay dead, relationships carry over. Do not repeat earlier chapters.`,
-      `- Re-read the author directives. If a directive is periodic or conditional (e.g. "someone dies every three chapters"), use the chapter numbers and the arc ledger above to decide whether chapter ${chapterIndex} must fulfil it, and if so plan it explicitly.`,
-      `- Exactly ${nodeCount} nodes (scenes), in reading order. Together they form one chapter with a beginning, rising tension and a closing hook.`,
-      `- Use about half of the cast at most in this chapter (≤ ${halfCast} different named characters), at most 3 named characters per node. A node with no named character (narration, unnamed extras, the player alone) is fine.`,
-      '- Prefer reusing existing locations; invent a new one only when the story needs it.',
-      `- synopsis: 3–5 sentences describing the whole chapter.`,
-      `- node.guide: 2–4 sentences of instructions for the scene writer: what happens, the emotional turn, how it ends.`,
-      `- node.location: either the exact name of an existing location (string), or a new location object {"name", "description" (one sentence), "imageTags" (English comma-separated scenery tags for an illustrator: place, architecture, time of day, weather, lighting — NO people, NO characters)}.`,
-      `- Write title, synopsis, guides, location names and descriptions in ${lang}. Character names exactly as in the cast list. imageTags always in English.`,
+      s.edit('goal'),
+      chapterIndex === 1 ? s.edit('firstChapter') : s.edit('continue'),
+      s.edit('directives'),
+      `${s.lock('nodeCount', `- Exactly ${nodeCount} nodes (scenes), in reading order.`)} ${s.edit('arc')}`,
+      s.edit('castLimit'),
+      s.edit('reuseLocations'),
+      s.edit('synopsisRule'),
+      s.edit('guideRule'),
+      s.lock(
+        'locationRule',
+        `- node.location: either the exact name of an existing location (string), or a new location object {"name", "description" (one sentence), "imageTags" (English comma-separated scenery tags for an illustrator: place, architecture, time of day, weather, lighting — NO people, NO characters)}.`,
+      ),
+      `${s.edit('langRule')} ${s.lock('nameRule', 'Character names exactly as in the cast list. imageTags always in English.')}`,
     ].join('\n'),
-    `Reply with JSON:\n{"title": "...", "synopsis": "...", "nodes": [{"title": "...", "guide": "...", "cast": ["name", ...], "location": "existing name" | {"name": "...", "description": "...", "imageTags": "..."}}]}`,
+    s.lock(
+      'shape',
+      `Reply with JSON:\n{"title": "...", "synopsis": "...", "nodes": [{"title": "...", "guide": "...", "cast": ["name", ...], "location": "existing name" | {"name": "...", "description": "...", "imageTags": "..."}}]}`,
+    ),
   ].join('\n\n');
-  return [
-    { role: 'system', content: SYSTEM_PLANNER },
-    { role: 'user', content: user },
-  ];
+  return [system, { role: 'user', content: user }];
 }
 
 // ---------- 장면 본문 ----------
@@ -143,47 +143,55 @@ export interface BeatPromptInput {
   storySoFar: string;
 }
 
-export function beatMessages(input: BeatPromptInput): ChatMessage[] {
+export function beatMessages(input: BeatPromptInput, ctx?: PromptCtx): ChatMessage[] {
   const { world, chapter, index, cast, location, previousTail, storySoFar } = input;
-  const lang = languageName(world.language);
   const node = chapter.nodes[index];
   if (!node) throw new Error(`no node ${index}`);
   const next = chapter.nodes[index + 1];
   const earlier = chapter.nodes.slice(0, index).map((n, i) => `${i + 1}. ${n.title} — ${firstSentence(n.guide, 160)}`);
+  const s = sectionsOf(promptTemplate('story-beat'), ctx, {
+    language: languageName(world.language),
+    world: world.name,
+    chapter: chapter.index,
+    scene: index + 1,
+    scenes: chapter.nodes.length,
+    next: next ? firstSentence(next.guide, 200) : '',
+    maxNarration: MAX_NARRATION_CHARS,
+  });
+  const system = systemOf(s);
 
   const user = [
-    `[task: story-beat chapter=${chapter.index} scene=${index + 1}/${chapter.nodes.length}]`,
-    worldBlock(world, true),
-    storySoFar ? `Previous chapters:\n${storySoFar}` : '',
-    `This chapter (Ch.${chapter.index}): "${chapter.title}"\nSynopsis: ${chapter.synopsis}`,
-    earlier.length ? `Scenes already written in this chapter:\n${earlier.join('\n')}` : 'This is the first scene of the chapter.',
-    previousTail.length ? `The previous scene ended like this (continue seamlessly from here):\n${previousTail.join('\n')}` : '',
+    s.lock('task', `[task: story-beat chapter=${chapter.index} scene=${index + 1}/${chapter.nodes.length}]`),
+    s.data('world', worldBlock(world, true)),
+    storySoFar ? `Previous chapters:\n${s.data('story', storySoFar)}` : '',
+    s.data('chapter', `This chapter (Ch.${chapter.index}): "${chapter.title}"\nSynopsis: ${chapter.synopsis}`),
+    earlier.length ? `Scenes already written in this chapter:\n${s.data('earlier', earlier.join('\n'))}` : s.edit('firstScene'),
+    previousTail.length ? `${s.edit('tailIntro')}\n${s.data('tail', previousTail.join('\n'))}` : '',
     [
-      `NOW WRITE scene ${index + 1}: "${node.title}"`,
-      `Guide: ${node.guide}`,
-      `Location: ${location ? `${location.name} — ${location.description}` : '(unspecified)'}`,
-      cast.length ? `Named characters in this scene:\n${cast.map(castSheet).join('\n')}` : 'No named cast member appears in this scene; use narration and, if needed, unnamed extras.',
+      s.data(
+        'scene',
+        [`NOW WRITE scene ${index + 1}: "${node.title}"`, `Guide: ${node.guide}`, `Location: ${location ? `${location.name} — ${location.description}` : '(unspecified)'}`].join('\n'),
+      ),
+      cast.length ? `Named characters in this scene:\n${s.data('cast', cast.map(castSheet).join('\n'))}` : s.edit('noCast'),
     ].join('\n'),
-    next
-      ? `Direction for the ending (do NOT reveal or start it, just lead toward it): the next scene will be about — ${firstSentence(next.guide, 200)}`
-      : 'This is the last scene of the chapter: close the chapter with a satisfying beat and a hook for what comes next.',
+    next ? s.edit('nextDirection') : s.edit('lastScene'),
     [
       'Rules:',
-      `- ${SEGMENT_LIMITS.ask.min}–${SEGMENT_LIMITS.ask.max} segments. Visual-novel pacing: each segment is ONE beat of action or ONE line of dialogue, short (narration ≤ 2 sentences, under ${MAX_NARRATION_CHARS} characters).`,
-      '- kind: "narration" (no speaker), "line" (spoken aloud, needs speaker), "thought" (inner voice, needs speaker).',
-      '- speaker: the exact cast name. An unnamed or minor character may speak with a short descriptive name (e.g. "Guard"). Named cast members who are not listed for this scene should not appear.',
-      '- Keep each character in voice (see voice samples). Show, do not tell. No meta commentary, no scene headings, no quotation marks around line text.',
-      '- Follow the author directives and stay consistent with the previous chapters.',
-      `- Write all text and non-cast speaker names in ${lang}.`,
+      `${s.lock('segmentCount', `- ${SEGMENT_LIMITS.ask.min}–${SEGMENT_LIMITS.ask.max} segments.`)} ${s.edit('pacing')}`,
+      s.lock('kinds', '- kind: "narration" (no speaker), "line" (spoken aloud, needs speaker), "thought" (inner voice, needs speaker).'),
+      `${s.lock('speaker', '- speaker: the exact cast name.')} ${s.edit('extras')}`,
+      s.edit('voice'),
+      s.edit('continuity'),
+      s.edit('langRule'),
     ].join('\n'),
-    'Reply with JSON:\n{"segments": [{"kind": "narration", "text": "..."}, {"kind": "line", "speaker": "name", "text": "..."}, {"kind": "thought", "speaker": "name", "text": "..."}]}',
+    s.lock(
+      'shape',
+      'Reply with JSON:\n{"segments": [{"kind": "narration", "text": "..."}, {"kind": "line", "speaker": "name", "text": "..."}, {"kind": "thought", "speaker": "name", "text": "..."}]}',
+    ),
   ]
     .filter(Boolean)
     .join('\n\n');
-  return [
-    { role: 'system', content: SYSTEM_WRITER },
-    { role: 'user', content: user },
-  ];
+  return [system, { role: 'user', content: user }];
 }
 
 // ---------- 챕터 마무리 ----------
@@ -196,30 +204,23 @@ export interface FinishPromptInput {
   storySoFar: string;
 }
 
-export function finishMessages(input: FinishPromptInput): ChatMessage[] {
+export function finishMessages(input: FinishPromptInput, ctx?: PromptCtx): ChatMessage[] {
   const { world, chapter, scenes, storySoFar } = input;
-  const lang = languageName(world.language);
+  const s = sectionsOf(promptTemplate('story-finish'), ctx, { language: languageName(world.language), world: world.name, chapter: chapter.index });
+  const system = systemOf(s);
   const script = scenes.length
-    ? scenes.map((s, i) => `## Scene ${i + 1}: ${s.title}\n${s.lines.join('\n')}`).join('\n\n')
+    ? scenes.map((sc, i) => `## Scene ${i + 1}: ${sc.title}\n${sc.lines.join('\n')}`).join('\n\n')
     : `(scenes not available; outline) ${chapter.synopsis}`;
   const user = [
-    `[task: story-recap chapter=${chapter.index}]`,
-    world.directives.trim() ? `Author directives (the ledger exists to track them):\n${world.directives.trim()}` : '',
-    storySoFar ? `Story before this chapter:\n${storySoFar}` : '',
-    `Chapter ${chapter.index}: "${chapter.title}"\nPlanned synopsis: ${chapter.synopsis}`,
-    `Full script of the chapter:\n${script}`,
-    [
-      'Write:',
-      '- summary: 5–8 sentences. What actually happened (as written, not as planned), who changed and how (relationships, injuries, deaths, revelations, decisions), and open threads. Use character names.',
-      '- ledger: ONE line stating what this chapter did to the overall arc (e.g. "X died; the alliance broke; the gate was found"). It will be used to keep periodic author directives on schedule, so mention any event a directive cares about.',
-      `- Write both in ${lang}.`,
-    ].join('\n'),
-    'Reply with JSON:\n{"summary": "...", "ledger": "..."}',
+    s.lock('task', `[task: story-recap chapter=${chapter.index}]`),
+    world.directives.trim() ? `Author directives (the ledger exists to track them):\n${s.data('directives', world.directives.trim())}` : '',
+    storySoFar ? `Story before this chapter:\n${s.data('story', storySoFar)}` : '',
+    s.data('chapter', `Chapter ${chapter.index}: "${chapter.title}"\nPlanned synopsis: ${chapter.synopsis}`),
+    `Full script of the chapter:\n${s.data('script', script)}`,
+    ['Write:', s.edit('summaryRule'), s.edit('ledgerRule'), s.edit('langRule')].join('\n'),
+    s.lock('shape', 'Reply with JSON:\n{"summary": "...", "ledger": "..."}'),
   ]
     .filter(Boolean)
     .join('\n\n');
-  return [
-    { role: 'system', content: SYSTEM_EDITOR },
-    { role: 'user', content: user },
-  ];
+  return [system, { role: 'user', content: user }];
 }

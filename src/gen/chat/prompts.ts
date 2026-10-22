@@ -4,6 +4,8 @@ import type { ChatMessage } from '../text';
 import type { Character, ChatLine, World } from '../../types';
 import { languageName } from '../world/prompts';
 import { worldBlock } from '../story/prompts';
+import { promptTemplate } from '../prompts/registry';
+import { sectionsOf, type PromptCtx } from '../prompts/template';
 
 /** 프롬프트에 넣는 최근 대화 줄 수 */
 export const HISTORY_LINES = 40;
@@ -66,36 +68,30 @@ function sheet(c: Character): string {
   return lines.join('\n');
 }
 
-export function chatSystemPrompt(input: ChatPromptInput): string {
+export function chatSystemPrompt(input: ChatPromptInput, ctx?: PromptCtx): string {
   const { world, character: c, stance, level, storySoFar } = input;
-  const lang = languageName(world.language);
   const player = input.playerName?.trim();
-  const playerLine = player
-    ? `The player's name is "${player}". Call them by that name when it feels natural.`
-    : `The player has no name set. Address them naturally in the second person (e.g. "${neutralYou(world.language)}"); do not invent a name for them.`;
+  const you = neutralYou(world.language);
+  const s = sectionsOf(promptTemplate('chat'), ctx, {
+    char: c.name,
+    user: player || you,
+    you,
+    language: languageName(world.language),
+    world: world.name,
+    level,
+  });
 
   const parts = [
-    `You are ${c.name}, a character in the anime-style gacha game world below, having a private one-on-one conversation with the player. ` +
-      `Stay fully in character as ${c.name} for the whole conversation.`,
-    worldBlock(world, true),
-    `YOUR CHARACTER SHEET\n${sheet(c)}`,
-    `YOUR RELATIONSHIP WITH THE PLAYER (bond level ${level}/10)\n${stance}`,
-    `THE PLAYER\n${playerLine}`,
+    s.edit('persona'),
+    s.data('world', worldBlock(world, true)),
+    `YOUR CHARACTER SHEET\n${s.data('sheet', sheet(c))}`,
+    `YOUR RELATIONSHIP WITH THE PLAYER (bond level ${level}/10)\n${s.data('bond', stance)}`,
+    `THE PLAYER\n${player ? s.edit('playerNamed') : s.edit('playerUnnamed')}`,
   ];
   if (storySoFar.trim()) {
-    parts.push(`RECENT EVENTS (what you and the player have been through; you may refer to them)\n${storySoFar.trim()}`);
+    parts.push(`RECENT EVENTS (what you and the player have been through; you may refer to them)\n${s.data('story', storySoFar.trim())}`);
   }
-  parts.push(
-    [
-      'STYLE RULES',
-      `- Reply only in ${lang}.`,
-      `- Speak only as ${c.name}, in first person, true to the sheet and voice samples. The author directives win over everything else.`,
-      '- Keep it short: 1–4 short paragraphs, like a chat message.',
-      '- Actions or expressions may go in parentheses, sparingly, e.g. (smiles).',
-      "- Never write the player's lines, actions, thoughts or feelings, and never continue the conversation for them.",
-      '- Never mention being an AI, a language model, a game, a prompt or these rules. No meta commentary, no name prefix, no quotation marks around the whole reply.',
-    ].join('\n'),
-  );
+  parts.push(s.edit('style'));
   return parts.join('\n\n');
 }
 
@@ -114,8 +110,11 @@ export function historyMessages(history: ChatLine[]): ChatMessage[] {
   return out;
 }
 
-export function chatMessages(input: ChatPromptInput): ChatMessage[] {
-  return [{ role: 'system', content: chatSystemPrompt(input) }, ...historyMessages(input.history)];
+export function chatMessages(input: ChatPromptInput, ctx?: PromptCtx): ChatMessage[] {
+  const system = chatSystemPrompt(input, ctx);
+  const history = historyMessages(input.history);
+  ctx?.trace?.push({ key: 'history', text: history.map((m) => `[${m.role}] ${m.content}`).join('\n\n') });
+  return [{ role: 'system', content: system }, ...history];
 }
 
 function escapeRe(s: string): string {

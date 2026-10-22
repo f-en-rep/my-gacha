@@ -92,4 +92,6 @@ export interface AppSettings {
   /** 지금 플레이 중인 월드와 세이브 */
   activeWorldId?: Id;
   activeSaveId?: Id;
+  /** 사용자가 고친 글 프롬프트: 프롬프트 id → 칸 key → 글. 없는 칸은 기본 글. 백업·월드 팩에 넣지 않는다 */
+  prompts?: Record<string, Record<string, string>>;
 }

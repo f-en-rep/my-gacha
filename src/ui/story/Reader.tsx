@@ -8,7 +8,7 @@ import type { Beat, Chapter, Character, Id, Location, Save, Segment, World } fro
 import { Portrait } from '../characters/Portrait';
 import { Icon } from '../Icon';
 import { navigate, paths } from '../router';
-import { autoDelayMs, isFreshStart, loadAutoSpeed, nextAutoSpeed, saveAutoSpeed, setFreshStart, speedLabel, type AutoSpeed } from './runner';
+import { autoDelayMs, startBeat, loadAutoSpeed, nextAutoSpeed, saveAutoSpeed, setFreshStart, speedLabel, type AutoSpeed } from './runner';
 
 type Phase = 'loading' | 'error' | 'reading' | 'complete';
 
@@ -72,7 +72,9 @@ export function Reader({ chapter, world, save }: { chapter: Chapter; world: Worl
   // 시작 위치: "처음부터"면 0, 아니면 저장된 곳
   const [pos, setPos] = useState(() => {
     const p = save.story?.[chapter.id];
-    if (isFreshStart(chapter.id) || !p) return { beat: 0, segment: 0 };
+    const start = startBeat(chapter.id);
+    if (start !== undefined) return { beat: Math.max(0, Math.min(start, total - 1)), segment: 0 };
+    if (!p) return { beat: 0, segment: 0 };
     const beat = Math.max(0, Math.min(p.beat, total - 1));
     return { beat, segment: Math.max(0, p.beat === beat ? p.segment : 0) };
   });

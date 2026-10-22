@@ -7,7 +7,7 @@ import { useSettings } from '../hooks';
 import { useActiveGame, useBeats, useChapters, STORY_CLEAR_REWARD } from '../../game/store';
 import { BEATS_PER_CHAPTER } from '../../gen/story';
 import type { Chapter, Save, StoryProgress, World } from '../../types';
-import { cancelPlan, openChapter, startPlan, usePlanState } from './runner';
+import { cancelPlan, openChapter, openScene, startPlan, usePlanState } from './runner';
 import { Reader } from './Reader';
 import './story.css';
 
@@ -264,9 +264,22 @@ function ChapterDetail({ chapter, save, world }: { chapter: Chapter; save: Save;
             const here = !cleared && p?.beat === i;
             return (
               <li key={i} className={(ok ? 'is-reached' : 'is-locked') + (here ? ' is-here' : '')}>
-                <span className="mono st-scene-no">{String(i + 1).padStart(2, '0')}</span>
-                <span className="st-scene-title">{ok ? n.title : '???'}</span>
-                {here && <span className="st-here mono">HERE</span>}
+                {ok ? (
+                  // 가 본 장면은 눌러서 그 장면부터 읽는다
+                  <button type="button" className="st-scene-open" onClick={() => openScene(chapter.id, i)} aria-label={`${i + 1}번 장면 「${n.title}」부터 읽기`}>
+                    <span className="mono st-scene-no">{String(i + 1).padStart(2, '0')}</span>
+                    <span className="st-scene-title">{n.title}</span>
+                    {here && <span className="st-here mono">HERE</span>}
+                    <span className="st-scene-go" aria-hidden="true">
+                      ▶
+                    </span>
+                  </button>
+                ) : (
+                  <>
+                    <span className="mono st-scene-no">{String(i + 1).padStart(2, '0')}</span>
+                    <span className="st-scene-title">???</span>
+                  </>
+                )}
               </li>
             );
           })}

@@ -11,6 +11,7 @@ import { today } from '../../game/store';
 import { chatComplete, describeTextError } from '../text';
 import { formatStorySoFar, resolveProseProfile } from '../story';
 import type { ChatLine, Character, Id, Save, TextProfile, World } from '../../types';
+import { promptCtx } from '../prompts';
 import { HISTORY_LINES, chatMessages, cleanReply } from './prompts';
 
 export { HISTORY_LINES, chatMessages, chatSystemPrompt, cleanReply, historyMessages, neutralYou } from './prompts';
@@ -75,15 +76,18 @@ async function writeReply(ctx: Ctx, history: ChatLine[], signal?: AbortSignal): 
     profile = await resolveProseProfile();
     signal?.throwIfAborted();
     const level = bondLevel(ctx.save.bonds?.[ctx.character.id]?.points ?? 0).level;
-    const messages = chatMessages({
-      world: ctx.world,
-      character: ctx.character,
-      playerName: ctx.save.playerName,
-      stance: bondStance(level),
-      level,
-      storySoFar: await recentStory(ctx.save),
-      history: history.slice(-HISTORY_LINES),
-    });
+    const messages = chatMessages(
+      {
+        world: ctx.world,
+        character: ctx.character,
+        playerName: ctx.save.playerName,
+        stance: bondStance(level),
+        level,
+        storySoFar: await recentStory(ctx.save),
+        history: history.slice(-HISTORY_LINES),
+      },
+      await promptCtx('chat'),
+    );
     const res = await chatComplete(profile, messages, {
       signal,
       maxTokens: profile.maxTokens ?? 1024,
