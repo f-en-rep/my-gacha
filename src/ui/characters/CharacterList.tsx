@@ -3,6 +3,7 @@ import { paths } from '../router';
 import type { Character, Id, Rarity, Save, World } from '../../types';
 import { LockMark, Portrait, RarityBadge } from './Portrait';
 import './character-editor.css';
+import { breakLabel } from '../terms';
 
 export type RarityFilter = 'all' | Rarity | 'owned';
 /** "role:딜러" 처럼 분류:값. 빈 문자열이면 전체 */
@@ -142,7 +143,7 @@ export function CharacterList({
                     )}
                   </span>
                   <span className="cc-name">{c.name}</span>
-                  <span className="cc-sub mono">{owned ? `잠재 ${owned.potential}` : '미보유'}</span>
+                  <span className="cc-sub mono">{owned ? breakLabel(owned.potential) : '미보유'}</span>
                 </a>
               </li>
             );

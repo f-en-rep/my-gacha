@@ -1,4 +1,4 @@
-// 상점 오른쪽 페이지: 종류별 상품 (뽑기 재화 교환 / 잠재 올리기 / 캐릭터 영입)
+// 상점 오른쪽 페이지: 종류별 상품 (뽑기 재화 교환 / 한계 돌파 / 캐릭터 영입)
 import { useState } from 'react';
 import type { GachaRules } from '../../core/gacha';
 import {
@@ -15,6 +15,7 @@ import {
 import type { Character, Rarity, Save, World } from '../../types';
 import { Portrait, RarityBadge, Stars } from '../characters/Portrait';
 import { paths } from '../router';
+import { breakLabel } from '../terms';
 
 export type ShopCategory = 'bundle' | 'potential' | 'recruit';
 
@@ -230,7 +231,7 @@ function Confirm({
   );
 }
 
-// ── 잠재 올리기 ────────────────────────────────────
+// ── 한계 돌파 ──────────────────────────────────────
 
 export function PotentialOffer({ world, save, cast, rules, busy, run, now }: OfferProps) {
   const shopName = world.currency.shop || '상점 재화';
@@ -249,7 +250,7 @@ export function PotentialOffer({ world, save, cast, rules, busy, run, now }: Off
     const r = await run((s) => raisePotential(s, c, now(), max));
     if (r.save) {
       const p = r.save.owned[c.id]?.potential ?? 0;
-      setNotice({ tone: 'ok', text: `${c.name}의 잠재가 ${p}이(가) 되었습니다.${p >= max ? ' 최대입니다.' : ''}` });
+      setNotice({ tone: 'ok', text: `${c.name} 한계 돌파! 이제 ${breakLabel(p)}입니다.${p >= max ? ' 최대입니다.' : ''}` });
       if (p >= max || r.save.wallet.shop < potentialCost(r.save, c.rarity)) setSelectedId(undefined);
     } else if (r.error) setNotice({ tone: 'error', text: r.error });
   };
@@ -257,23 +258,23 @@ export function PotentialOffer({ world, save, cast, rules, busy, run, now }: Off
   return (
     <div className="sh-chars">
       <p className="small muted">
-        잠재가 {max} 미만인 보유 캐릭터 {list.length}명 · 한 번에 +1
+        {breakLabel(max)} 미만인 보유 캐릭터 {list.length}명 · 한 번에 +1
       </p>
       <NoticeLine notice={notice} />
       {list.length === 0 ? (
         <p className="list-empty">
-          {ownedCount === 0 ? '아직 보유한 캐릭터가 없습니다.' : `보유한 캐릭터가 모두 잠재 ${max}입니다.`}{' '}
+          {ownedCount === 0 ? '아직 보유한 캐릭터가 없습니다.' : `보유한 캐릭터가 모두 ${breakLabel(max)}입니다.`}{' '}
           {ownedCount === 0 && <a href={'#' + paths.pull}>뽑으러 가기</a>}
         </p>
       ) : (
-        <ul className="sh-grid" aria-label="잠재를 올릴 캐릭터">
+        <ul className="sh-grid" aria-label="돌파시킬 캐릭터">
           {list.map((c) => {
             const p = save.owned[c.id]!.potential;
             return (
               <Tile
                 key={c.id}
                 character={c}
-                line={`잠재 ${p} → ${p + 1}`}
+                line={`${breakLabel(p)} → ${breakLabel(p + 1)}`}
                 cost={potentialCost(save, c.rarity)}
                 wallet={save.wallet.shop}
                 selected={c.id === selectedId}
@@ -287,8 +288,8 @@ export function PotentialOffer({ world, save, cast, rules, busy, run, now }: Off
       {selected && (
         <Confirm
           character={selected}
-          title="잠재 올리기"
-          line={`잠재 ${save.owned[selected.id]!.potential} → ${save.owned[selected.id]!.potential + 1}`}
+          title="한계 돌파"
+          line={`${breakLabel(save.owned[selected.id]!.potential)} → ${breakLabel(save.owned[selected.id]!.potential + 1)}`}
           cost={potentialCost(save, selected.rarity)}
           save={save}
           shopName={shopName}
@@ -338,7 +339,7 @@ export function RecruitOffer({ world, save, cast, busy, run, now, onRecruited }:
             <span className="kicker">RECRUITED · 영입 완료</span>
             <strong>{done.name}</strong>
             <span>
-              <Stars rarity={done.rarity} /> <span className="mono">잠재 1</span>
+              <Stars rarity={done.rarity} /> <span className="mono">{breakLabel(1)}</span>
             </span>
             <div className="sh-done-actions">
               <a className="btn btn-primary btn-small" href={'#' + paths.character(done.id)}>
@@ -389,7 +390,7 @@ export function RecruitOffer({ world, save, cast, busy, run, now, onRecruited }:
         <Confirm
           character={selected}
           title="캐릭터 영입"
-          line={`${selected.rarity}★ · 잠재 1로 영입`}
+          line={`${selected.rarity}★ · ${breakLabel(1)}으로 영입`}
           cost={recruitCost(save, selected.rarity)}
           save={save}
           shopName={shopName}

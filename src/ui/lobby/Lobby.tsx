@@ -109,8 +109,14 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
     dialogName = featured.name;
     dialogBody = (
       <p className="dialog-quote" aria-label={line}>
-        <span aria-hidden="true">{typed.shown}</span>
-        {typed.typing && <span className="type-caret" aria-hidden="true" />}
+        {/* 다 찍힌 대사를 안 보이게 깔아 자리를 먼저 잡는다: 찍는 동안 상자 높이가 변하지 않게 */}
+        <span className="quote-ghost" aria-hidden="true">
+          「{line}」
+        </span>
+        <span className="quote-typed" aria-hidden="true">
+          「{typed.shown}
+          {typed.typing ? <span className="type-caret" /> : '」'}
+        </span>
       </p>
     );
     dialogTalk = (
@@ -160,6 +166,7 @@ export function Lobby({ panelOpen }: { panelOpen: boolean }) {
       </header>
 
       <div className="lobby-stage">
+        <Orbits />
         <figure className="stage-arch">
           <div className="arch-window">
             {featured ? (
@@ -253,17 +260,23 @@ function Sky() {
   ];
   return (
     <div className="lobby-sky" aria-hidden="true">
-      <svg className="sky-orbits" viewBox="-500 -500 1000 1000" preserveAspectRatio="xMidYMid meet">
-        <circle r="300" />
-        <circle r="420" className="dash" />
-        <ellipse rx="490" ry="150" transform="rotate(-18)" />
-        <ellipse rx="470" ry="120" transform="rotate(24)" className="dash" />
-      </svg>
       {sparkles.map(([x, y, r], i) => (
         <svg key={i} className="sky-spark" style={{ left: x + '%', top: y + '%', width: r * 2, height: r * 2, animationDelay: i * 0.7 + 's' }} viewBox="-10 -10 20 20">
           <path d="M0-10C.8-2 2-.8 10 0 2 .8.8 2 0 10-.8 2-2 .8-10 0-2-.8-.8-2 0-10z" />
         </svg>
       ))}
     </div>
+  );
+}
+
+/** 대표 캐릭터 뒤 궤도 고리 (장식) */
+function Orbits() {
+  return (
+    <svg className="sky-orbits" viewBox="-500 -500 1000 1000" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <circle r="300" />
+      <circle r="420" className="dash" />
+      <ellipse rx="490" ry="150" transform="rotate(-18)" />
+      <ellipse rx="470" ry="120" transform="rotate(24)" className="dash" />
+    </svg>
   );
 }

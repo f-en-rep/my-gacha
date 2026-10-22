@@ -72,12 +72,17 @@
   user-select: none;
 }
 
-.dialog-quote::before {
-  content: '「';
+/* 대사 두 겹: 보이지 않는 전체 대사가 자리를 잡고, 찍히는 대사가 그 위에 */
+.dialog-quote {
+  display: grid;
 }
 
-.dialog-quote::after {
-  content: '」';
+.dialog-quote > span {
+  grid-area: 1 / 1;
+}
+
+.quote-ghost {
+  visibility: hidden;
 }
 
 .dialog-next {

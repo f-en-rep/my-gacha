@@ -3,6 +3,7 @@ import { canExchangeSpark, EMPTY_PROGRESS, pityKey, sixStarRate, type GachaRules
 import type { Banner, Character, Id, Save, World } from '../../types';
 import { paths } from '../router';
 import { BannerArt, bannerDates, bannerState, KIND_CODE, KIND_LABEL, pct, Portrait, STATE_LABEL, Stars } from './art';
+import { breakLabel } from '../terms';
 
 function Featured({ ids, byId, rarity }: { ids: Id[]; byId: Map<Id, Character>; rarity: 5 | 6 }) {
   const list = ids.map((id) => byId.get(id)).filter((c): c is Character => !!c);
@@ -179,7 +180,7 @@ export function BannerDetail({
                     <Portrait character={c} className="pl-spark-portrait" />
                     <span>
                       <strong>{c.name}</strong>
-                      {save.owned[c.id] && <small className="muted"> 잠재 {save.owned[c.id]?.potential}</small>}
+                      {save.owned[c.id] && <small className="muted"> {breakLabel(save.owned[c.id]!.potential)}</small>}
                     </span>
                   </label>
                 ))}

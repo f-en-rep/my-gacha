@@ -18,8 +18,8 @@ import './shop.css';
 
 const CATEGORIES: { key: ShopCategory; code: string; title: string; desc: string }[] = [
   { key: 'bundle', code: 'EXCHANGE', title: '뽑기 재화 교환', desc: '상점 재화를 뽑기 재화로 바꿉니다.' },
-  { key: 'potential', code: 'POTENTIAL', title: '잠재 올리기', desc: '보유한 캐릭터의 잠재를 한 단계 올립니다.' },
-  { key: 'recruit', code: 'RECRUIT', title: '캐릭터 영입', desc: '아직 없는 캐릭터를 잠재 1로 데려옵니다.' },
+  { key: 'potential', code: 'BREAK', title: '한계 돌파', desc: '보유한 캐릭터를 한 단계 돌파시킵니다.' },
+  { key: 'recruit', code: 'RECRUIT', title: '캐릭터 영입', desc: '아직 없는 캐릭터를 돌파 0으로 데려옵니다.' },
 ];
 
 const fmt = (n: number) => n.toLocaleString('ko-KR');
@@ -131,7 +131,7 @@ function ShopLeft({
           <b className="mono">{fmt(save.wallet.shop)}</b>
         </p>
         <p className="small muted">
-          잠재가 최대({rules.maxPotential})인 캐릭터가 중복으로 나오면 받습니다 · {perRarity(rules.dupeShop)}
+          한계 돌파가 최대(돌파 {rules.maxPotential - 1})인 캐릭터가 중복으로 나오면 받습니다 · {perRarity(rules.dupeShop)}
         </p>
         <p className="sh-balance-sub">
           <span className="currency currency-pull">

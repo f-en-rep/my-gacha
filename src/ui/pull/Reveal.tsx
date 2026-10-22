@@ -6,6 +6,7 @@ import type { Character, Id, Rarity } from '../../types';
 import { Icon } from '../Icon';
 import { navigate, paths } from '../router';
 import { Portrait, Stars } from './art';
+import { breakLabel } from '../terms';
 
 type Phase = 'build' | 'flip' | 'done';
 
@@ -145,7 +146,7 @@ export function Reveal({
                 +{o.shopGained} {shopName}
               </span>
             ) : (
-              <span className="pl-tag">잠재 {o.potential}</span>
+              <span className="pl-tag">{breakLabel(o.potential)}</span>
             );
             return (
               <li key={i} style={{ ['--i' as string]: i }}>
