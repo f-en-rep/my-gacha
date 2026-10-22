@@ -96,7 +96,7 @@ async function seed() {
   await db.saves.put(save);
   await db.pulls.bulkAdd(pulls);
   await db.profiles.put({ id: 'p1', type: 'text', provider: 'openrouter', label: 'x', apiKey: 'sk-SECRET-KEY', model: 'm', useRelay: false });
-  await db.settings.put({ id: 'app', routing: { structured: 'p1' }, autoPaintLowRarity: false, activeWorldId: 'w1', activeSaveId: 's1' });
+  await db.settings.put({ id: 'app', routing: { structured: 'p1' }, autoPaintLowRarity: false, activeWorldId: 'w1', activeSaveId: 's1', prompts: { chat: { persona: 'MY-PROMPT-OVERRIDE' } } });
 }
 
 async function unzipBlob(b: Blob) {
@@ -128,11 +128,22 @@ describe('월드 팩', () => {
     expect(all).not.toContain('sk-SECRET-KEY');
     expect(all).not.toContain('rngState');
     expect(all).not.toContain('genProgress');
+    expect(all).not.toContain('MY-PROMPT-OVERRIDE');
     const w = JSON.parse(strFromU8(files['world.json']!));
     expect(w.status).toBeUndefined();
     const m = JSON.parse(strFromU8(files['manifest.json']!));
     expect(m).toMatchObject({ format: 'my-gacha-world', formatVersion: 1, worldName: '별의 정원 / 테스트', author: '나', characters: 4, includes: { story: false } });
     expect(m.images[0]).toMatchObject({ file: 'images/a1.webp', assetId: 'a1', mime: 'image/webp', width: 832, height: 1216, seed: 42 });
+  });
+
+  it('백업에도 키와 고친 프롬프트(설정)가 없다', async () => {
+    const files = await unzipBlob((await exportBackup('w1')).blob);
+    const all = Object.keys(files)
+      .filter((n) => n.endsWith('.json'))
+      .map((n) => strFromU8(files[n]!))
+      .join('\n');
+    expect(all).not.toContain('sk-SECRET-KEY');
+    expect(all).not.toContain('MY-PROMPT-OVERRIDE');
   });
 
   it('왕복: 새 id로 들어가고 참조가 이어진다', async () => {

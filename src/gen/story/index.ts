@@ -8,6 +8,7 @@ import { newId, now } from '../../core/id';
 import { generateJson } from '../text';
 import { resolveStructuredProfile } from '../world';
 import type { Beat, Chapter, Character, Id, Location, Segment, StoryNode, TextProfile } from '../../types';
+import { promptCtx } from '../prompts';
 import { beatMessages, finishMessages, formatStorySoFar, planMessages, segmentLine } from './prompts';
 import { beatSchema, finishSchema, matchName, normName, planSchema } from './schema';
 
@@ -100,7 +101,7 @@ export async function planNextChapter(worldId: Id, opts: StoryGenOptions = {}): 
   const castNames = cast.map((c) => c.name);
   const { value } = await generateJson(
     profile,
-    planMessages({ world, cast, locations, chapterIndex, nodeCount: BEATS_PER_CHAPTER, storySoFar: formatStorySoFar(chapters, 4) }),
+    planMessages({ world, cast, locations, chapterIndex, nodeCount: BEATS_PER_CHAPTER, storySoFar: formatStorySoFar(chapters, 4) }, await promptCtx('story-plan')),
     planSchema({ nodeCount: BEATS_PER_CHAPTER, castNames, locationNames: locations.map((l) => l.name), maxCastPerNode: MAX_CAST_PER_NODE }),
     { signal, maxTokens: profile.maxTokens ?? 8192, temperature: profile.temperature ?? 0.9 },
   );
@@ -275,7 +276,7 @@ async function writeBeat(chapterId: Id, index: number, signal: AbortSignal, onPr
 
   const { value } = await generateJson(
     profile,
-    beatMessages({ world, chapter, index, cast: sceneCast, location, previousTail, storySoFar: await storySoFar(world.id, chapter.index, 2) }),
+    beatMessages({ world, chapter, index, cast: sceneCast, location, previousTail, storySoFar: await storySoFar(world.id, chapter.index, 2) }, await promptCtx('story-beat')),
     beatSchema(),
     { signal, maxTokens: profile.maxTokens ?? 8192, temperature: profile.temperature ?? 0.9 },
   );
@@ -334,7 +335,7 @@ export async function finishChapter(chapterId: Id, opts: StoryGenOptions = {}): 
 
   const { value } = await generateJson(
     profile,
-    finishMessages({ world, chapter, scenes, storySoFar: await storySoFar(world.id, chapter.index, 2) }),
+    finishMessages({ world, chapter, scenes, storySoFar: await storySoFar(world.id, chapter.index, 2) }, await promptCtx('story-finish')),
     finishSchema(),
     { signal, maxTokens: profile.maxTokens ?? 4096, temperature: profile.temperature ?? 0.5 },
   );
