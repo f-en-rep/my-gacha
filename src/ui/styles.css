@@ -2015,7 +2015,8 @@ body.panel-open {
     display: grid;
     place-items: center;
     width: 44px;
-    height: 80px;
+    /* 탭 아홉 개가 낮은 화면에도 들어가게 */
+    height: clamp(52px, calc((100dvh - 190px) / 9 - 6px), 80px);
     writing-mode: vertical-rl;
     background: var(--surface);
     border: 1px solid var(--rule);

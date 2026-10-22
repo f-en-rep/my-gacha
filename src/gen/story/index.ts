@@ -269,7 +269,7 @@ export async function ensureBeat(chapterId: Id, index: number, opts: BeatOptions
       async (e: unknown) => {
         const ch = await db.chapters.get(chapterId).catch(() => undefined);
         await noticeFailure(
-          { key: noticeKey, job: 'story-beat', title: `${ch ? `${ch.index}장 ` : ''}장면 ${index + 1}을(를) 쓰지 못했어요`, link: `/story/${encodeURIComponent(chapterId)}`, worldId: ch?.worldId },
+          { key: noticeKey, job: 'story-beat', title: `${ch ? `${ch.index}장 ` : ''}${index + 1}번 장면을 쓰지 못했어요`, link: `/story/${encodeURIComponent(chapterId)}`, worldId: ch?.worldId },
           e,
           controller.signal,
         );

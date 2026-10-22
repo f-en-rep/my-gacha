@@ -11,7 +11,17 @@ const cast = [
   { id: 'c1', name: '아린' },
   { id: 'c2', name: 'Serena Vale' },
 ];
-const entry = (over: Partial<LoreEntry>): LoreEntry => ({ id: 'x', worldId: 'w1', kind: 'person', name: 'n', summary: 's', source: 'story', createdAt: T, updatedAt: T, ...over });
+const entry = (over: Partial<LoreEntry>): LoreEntry => ({
+  id: 'x',
+  worldId: 'w1',
+  kind: 'person',
+  name: 'n',
+  summary: 's',
+  source: 'story',
+  createdAt: T,
+  updatedAt: T,
+  ...over,
+});
 
 describe('캐스트 이름 거르기', () => {
   it('같은 이름, 호칭, 영어 성·이름 하나', () => {
@@ -23,11 +33,15 @@ describe('캐스트 이름 거르기', () => {
 describe('기록 합치기', () => {
   it('같은 종류·이름이면 고쳐 쓰고, 종류가 다르면 따로', () => {
     const have = [entry({ id: 'p1', name: '등대지기', summary: '옛' })];
-    const out = mergeLore(have, [
-      { kind: 'person', name: '등대 지기', summary: '새 설명, 아린의 스승' },
-      { kind: 'item', name: '등대지기', summary: '물건' },
-      { kind: 'person', name: '아린', summary: '캐스트' },
-    ], { worldId: 'w1', chapterId: 'ch2', chapterIndex: 2, cast, at: T });
+    const out = mergeLore(
+      have,
+      [
+        { kind: 'person', name: '등대 지기', summary: '새 설명, 아린의 스승' },
+        { kind: 'item', name: '등대지기', summary: '물건' },
+        { kind: 'person', name: '아린', summary: '캐스트' },
+      ],
+      { worldId: 'w1', chapterId: 'ch2', chapterIndex: 2, cast, at: T },
+    );
     expect(out).toHaveLength(2);
     expect(out[0]).toMatchObject({ id: 'p1', summary: '새 설명, 아린의 스승', castIds: ['c1'] });
     expect(out[1]).toMatchObject({ kind: 'item', chapterIndex: 2, source: 'story' });
@@ -35,7 +49,16 @@ describe('기록 합치기', () => {
 
   it('직접 적은 기록과 바뀐 게 없는 기록은 건드리지 않는다', () => {
     const have = [entry({ id: 'm', name: '열쇠', kind: 'item', source: 'manual' }), entry({ id: 's', name: '노인', summary: '같음' })];
-    expect(mergeLore(have, [{ kind: 'item', name: '열쇠', summary: '덮기' }, { kind: 'person', name: '노인', summary: '같음' }], { worldId: 'w1', cast })).toEqual([]);
+    expect(
+      mergeLore(
+        have,
+        [
+          { kind: 'item', name: '열쇠', summary: '덮기' },
+          { kind: 'person', name: '노인', summary: '같음' },
+        ],
+        { worldId: 'w1', cast },
+      ),
+    ).toEqual([]);
   });
 
   it('긴 글은 자르고, 최신 챕터 먼저', () => {

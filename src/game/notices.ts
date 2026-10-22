@@ -45,7 +45,10 @@ export async function addNotice(input: NoticeInput): Promise<Id | undefined> {
       await db.notices.add(n);
       const total = await db.notices.count();
       if (total > NOTICE_CAP) {
-        const old = await db.notices.orderBy('updatedAt').limit(total - NOTICE_CAP).primaryKeys();
+        const old = await db.notices
+          .orderBy('updatedAt')
+          .limit(total - NOTICE_CAP)
+          .primaryKeys();
         await db.notices.bulkDelete(old);
       }
       return n.id;

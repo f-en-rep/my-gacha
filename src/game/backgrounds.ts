@@ -66,7 +66,7 @@ export function paintLocation(locationId: Id, opts: BackgroundPaintOptions = {})
       },
       async (e: unknown) => {
         const l = await db.locations.get(locationId).catch(() => undefined);
-        await noticeFailure({ key, job: 'location-art', title: `배경 「${l?.name ?? '장소'}」을(를) 그리지 못했어요`, link: '/story', worldId: l?.worldId }, e, opts.signal);
+        await noticeFailure({ key, job: 'location-art', title: `「${l?.name ?? '장소'}」 배경을 그리지 못했어요`, link: '/story', worldId: l?.worldId }, e, opts.signal);
         throw e;
       },
     )

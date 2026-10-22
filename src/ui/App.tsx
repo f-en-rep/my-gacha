@@ -9,6 +9,9 @@ import { SettingsPanel } from './settings/SettingsPanel';
 import { StoryPanel } from './story/StoryPanel';
 import { ChatPanel } from './chat/ChatPanel';
 import { ShopPanel } from './shop/ShopPanel';
+import { ArchivePanel } from './archive/ArchivePanel';
+import { NoticesPanel } from './notices/NoticesPanel';
+import { NoticeToast } from './notices/NoticeToast';
 
 function PanelFor({ route }: { route: Route }) {
   switch (route.name) {
@@ -26,6 +29,10 @@ function PanelFor({ route }: { route: Route }) {
       return <ShopPanel />;
     case 'story':
       return <StoryPanel chapterId={route.chapterId} read={route.read} />;
+    case 'archive':
+      return <ArchivePanel kind={route.kind} id={route.id} mode={route.mode} />;
+    case 'notices':
+      return <NoticesPanel />;
     case 'settings':
       return <SettingsPanel sub={route.sub} />;
   }
@@ -48,6 +55,7 @@ export function App() {
     <div className="app" data-panel={open ? route.name : undefined}>
       <Lobby panelOpen={open} />
       <PanelFor route={route} />
+      <NoticeToast panelOpen={open} />
     </div>
   );
 }

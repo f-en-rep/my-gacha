@@ -45,7 +45,11 @@ export function isCastName(name: string, cast: Pick<Character, 'name'>[]): boole
     if (ck === k) return true;
     // 이름 앞이나 뒤에 호칭만 붙은 것 (영어 이름은 성·이름 중 하나만 써도 같은 사람: "Arin Vale" ↔ "Arin")
     if (k.startsWith(ck) && HONORIFIC.test(k.slice(ck.length))) return true;
-    const words = c.name.trim().split(/\s+/).map(loreKey).filter((w) => w.length >= 3);
+    const words = c.name
+      .trim()
+      .split(/\s+/)
+      .map(loreKey)
+      .filter((w) => w.length >= 3);
     return words.length > 1 && words.includes(k);
   });
 }

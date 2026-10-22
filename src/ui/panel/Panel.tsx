@@ -1,14 +1,17 @@
 import type { ReactNode } from 'react';
 import { Icon } from '../Icon';
 import { paths, type PanelName } from '../router';
+import { useUnreadNotices } from '../../game/notices';
 
 const TABS: { name: PanelName; label: string; path: string }[] = [
   { name: 'pull', label: '뽑기', path: paths.pull },
   { name: 'characters', label: '캐릭터', path: paths.characters },
   { name: 'story', label: '스토리', path: paths.story },
+  { name: 'archive', label: '기록', path: paths.archive },
   { name: 'chat', label: '대화', path: paths.chat() },
   { name: 'shop', label: '상점', path: paths.shop },
   { name: 'world', label: '월드', path: paths.world },
+  { name: 'notices', label: '알림', path: paths.notices },
   { name: 'settings', label: '설정', path: paths.settings },
 ];
 
@@ -35,6 +38,7 @@ export function Panel({
   /** 좁은 화면에서 오른쪽 페이지를 보고 있을 때 돌아갈 경로 */
   back?: string;
 }) {
+  const unread = useUnreadNotices();
   return (
     <div className="panel-layer">
       <a className="panel-scrim" href={'#' + paths.home} aria-label="패널 닫기" tabIndex={-1} />
@@ -63,6 +67,11 @@ export function Panel({
         {TABS.map((t) => (
           <a key={t.name} href={'#' + t.path} aria-current={t.name === name ? 'page' : undefined}>
             {t.label}
+            {t.name === 'notices' && unread > 0 && (
+              <span className="tab-badge" aria-label={`안 읽은 알림 ${unread}개`}>
+                {unread > 99 ? '99+' : unread}
+              </span>
+            )}
           </a>
         ))}
       </nav>

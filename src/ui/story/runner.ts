@@ -49,7 +49,7 @@ export async function startPlan(worldId: Id): Promise<void> {
     set(worldId, { running: false, chapterId: id });
     const ch = await db.chapters.get(id);
     void resolveNotice(`story-plan:${worldId}`);
-    await addNotice({ key: `story-plan:${worldId}`, kind: 'done', job: 'story-plan', title: `${ch?.index ?? ''}장 「${ch?.title ?? ''}」을(를) 계획했어요`, link: paths.chapter(id), worldId });
+    await addNotice({ key: `story-plan:${worldId}`, kind: 'done', job: 'story-plan', title: `${ch?.index ?? ''}장 「${ch?.title ?? ''}」 계획을 마쳤어요`, link: paths.chapter(id), worldId });
     // 스토리 패널을 보고 있으면 새 챕터를 바로 고른다 (읽기 화면이나 다른 패널이면 그대로 둔다)
     const h = location.hash.replace(/^#\/?/, '');
     if (h === 'story' || (h.startsWith('story/') && !h.endsWith('/read'))) navigate(paths.chapter(id), { replace: true });
