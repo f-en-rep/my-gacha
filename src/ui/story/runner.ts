@@ -2,7 +2,7 @@
 import { useSyncExternalStore } from 'react';
 import { planNextChapter } from '../../gen/story';
 import { navigate, paths } from '../router';
-import type { Id } from '../../types';
+import type { Id, StoryProgress } from '../../types';
 
 export interface PlanState {
   running: boolean;
@@ -67,4 +67,56 @@ export function setFreshStart(chapterId: Id | undefined): void {
 }
 export function isFreshStart(chapterId: Id): boolean {
   return freshStart === chapterId;
+}
+
+/** 패널에서 챕터를 열 때: 읽던 중이면 이어서, 안 읽었거나 다 읽었으면 처음부터 ("이어 읽기" 버튼과 같다) */
+export function openChapter(chapterId: Id, p: StoryProgress | undefined, fresh = !p || !!p.clearedAt): void {
+  setFreshStart(fresh ? chapterId : undefined);
+  navigate(paths.read(chapterId));
+}
+
+// ── 자동 넘기기 속도: 1× → 1.5× → 2× → 3×. 브라우저마다 기억한다 ──
+export const AUTO_SPEEDS = [1, 1.5, 2, 3] as const;
+export type AutoSpeed = (typeof AUTO_SPEEDS)[number];
+const SPEED_KEY = 'my-gacha.story.autoSpeed';
+
+type KV = Pick<Storage, 'getItem' | 'setItem'>;
+
+function storage(): KV | undefined {
+  try {
+    return globalThis.localStorage;
+  } catch {
+    return undefined;
+  }
+}
+
+export function loadAutoSpeed(s: KV | undefined = storage()): AutoSpeed {
+  try {
+    const v = Number(s?.getItem(SPEED_KEY));
+    return AUTO_SPEEDS.find((x) => x === v) ?? 1;
+  } catch {
+    return 1;
+  }
+}
+
+export function saveAutoSpeed(v: AutoSpeed, s: KV | undefined = storage()): void {
+  try {
+    s?.setItem(SPEED_KEY, String(v));
+  } catch {
+    // 사생활 보호 모드 등: 기억하지 못해도 그만
+  }
+}
+
+export function nextAutoSpeed(v: AutoSpeed): AutoSpeed {
+  return AUTO_SPEEDS[(AUTO_SPEEDS.indexOf(v) + 1) % AUTO_SPEEDS.length]!;
+}
+
+/** "1.5×" */
+export function speedLabel(v: AutoSpeed): string {
+  return `${v}×`;
+}
+
+/** 자동 넘기기: 다 찍은 뒤 기다리는 시간 (글자 수에 비례, 속도로 나눈다) */
+export function autoDelayMs(chars: number, speed: AutoSpeed): number {
+  return Math.round((1500 + Math.min(chars, 80) * 25) / speed);
 }
