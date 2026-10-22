@@ -60,18 +60,25 @@ export function cancelPlan(worldId: Id): void {
   controllers.get(worldId)?.abort();
 }
 
-/** "처음부터"로 열었는지 읽기 화면에 넘겨 주는 메모 (경로에는 담지 않는다). 읽기 화면을 닫을 때 지운다 */
-let freshStart: Id | undefined;
-export function setFreshStart(chapterId: Id | undefined): void {
-  freshStart = chapterId;
+/** 어느 장면부터 열지 읽기 화면에 넘겨 주는 메모 (경로에는 담지 않는다). "처음부터"는 0. 읽기 화면을 닫을 때 지운다 */
+let startAt: { chapterId: Id; beat: number } | undefined;
+export function setFreshStart(chapterId: Id | undefined, beat = 0): void {
+  startAt = chapterId ? { chapterId, beat } : undefined;
 }
-export function isFreshStart(chapterId: Id): boolean {
-  return freshStart === chapterId;
+/** 정해 둔 시작 장면. 없으면 undefined (저장된 곳에서 이어 읽기) */
+export function startBeat(chapterId: Id): number | undefined {
+  return startAt?.chapterId === chapterId ? startAt.beat : undefined;
 }
 
 /** 패널에서 챕터를 열 때: 읽던 중이면 이어서, 안 읽었거나 다 읽었으면 처음부터 ("이어 읽기" 버튼과 같다) */
 export function openChapter(chapterId: Id, p: StoryProgress | undefined, fresh = !p || !!p.clearedAt): void {
   setFreshStart(fresh ? chapterId : undefined);
+  navigate(paths.read(chapterId));
+}
+
+/** 장면 목록에서 고른 장면부터 읽기 */
+export function openScene(chapterId: Id, beat: number): void {
+  setFreshStart(chapterId, beat);
   navigate(paths.read(chapterId));
 }
 
